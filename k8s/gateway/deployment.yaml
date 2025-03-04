@@ -17,18 +17,21 @@ spec:
           image: <your-docker-image>
           ports:
             - containerPort: 80
+              protocol: TCP
             - containerPort: 443
+              protocol: TCP
           envFrom:
             - configMapRef:
                 name: gateway-config
           volumeMounts:
             - name: ssl-certs
               mountPath: /etc/letsencrypt
-          volumeMounts:
             - name: nginx-cache
               mountPath: /var/cache/nginx/bot_cache
       volumes:
         - name: ssl-certs
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: ssl-certs-pvc
         - name: nginx-cache
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: nginx-cache-pvc
