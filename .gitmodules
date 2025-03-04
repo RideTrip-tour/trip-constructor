@@ -1,0 +1,4 @@
+[submodule "services/gateway_service"]
+	path = services/gateway_service
+	url = git@github.com:RideTrip-tour/gateway-service.git
+	branch = main
