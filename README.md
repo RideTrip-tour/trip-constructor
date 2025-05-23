@@ -1,4 +1,4 @@
-###Список микросервисов:
+### Список микросервисов:
 
 - gateway-service – единая точка входа для всех запросов, маршрутизация, аутентификация, кэширование.
 
@@ -23,38 +23,38 @@
 - bot-service – Telegram-бот с поддержкой FAQ.
 
 
-###Приоритетный порядок разработки
+### Приоритетный порядок разработки
 
-####gateway-service:
+#### gateway-service:
 
 Настройка маршрутизации и аутентификации.
 
 Интеграция с auth-service для проверки JWT-токенов.
 
-####auth-service:
+#### auth-service:
 
 Реализация базовой аутентификации и JWT.
 
-####users-service:
+#### users-service:
 
 Управление профилями пользователей.
 
-####activities-service + locations-service:
+#### activities-service + locations-service:
 
 Создание базы данных с активностями и локациями.
 
-####plans-service:
+#### plans-service:
 
 Генерация планов отдыха.
 
-####routes-service + departure-service:
+#### routes-service + departure-service:
 
 Расчет маршрутов и точек отправления.
 
-####pricing-service:
+#### pricing-service:
 
 Интеграция с API транспортных компаний.
 
-####pdf-service + bot-service:
+#### pdf-service + bot-service:
 
 Генерация PDF и Telegram-бот.
