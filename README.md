@@ -1,59 +1,60 @@
-Список микросервисов:
+###Список микросервисов:
 
-gateway-service – единая точка входа для всех запросов, маршрутизация, аутентификация, кэширование.
+- gateway-service – единая точка входа для всех запросов, маршрутизация, аутентификация, кэширование.
 
-auth-service – авторизация и аутентификация (JWT, роли, OAuth в будущем).
+- auth-service – авторизация и аутентификация (JWT, роли, OAuth в будущем).
 
-users-service – управление пользователями, хранение истории поездок.
+- users-service – управление пользователями, хранение истории поездок.
 
-activities-service – список активностей, их сезонность.
+- activities-service – список активностей, их сезонность.
 
-locations-service – локации, привязка активностей к ним.
+- locations-service – локации, привязка активностей к ним.
 
-plans-service – генерация планов отдыха.
+- plans-service – генерация планов отдыха.
 
-routes-service – расчет маршрутов (в будущем с ИИ).
+- routes-service – расчет маршрутов (в будущем с ИИ).
 
-departure-service – управление точками отправления.
+- departure-service – управление точками отправления.
 
-pricing-service – подтягивание цен на билеты.
+- pricing-service – подтягивание цен на билеты.
 
-pdf-service – генерация PDF-файлов с деталями поездки.
+- pdf-service – генерация PDF-файлов с деталями поездки.
 
-bot-service – Telegram-бот с поддержкой FAQ.
+- bot-service – Telegram-бот с поддержкой FAQ.
 
 
-Приоритетный порядок разработки
-gateway-service:
+###Приоритетный порядок разработки
+
+####gateway-service:
 
 Настройка маршрутизации и аутентификации.
 
 Интеграция с auth-service для проверки JWT-токенов.
 
-auth-service:
+####auth-service:
 
 Реализация базовой аутентификации и JWT.
 
-users-service:
+####users-service:
 
 Управление профилями пользователей.
 
-activities-service + locations-service:
+####activities-service + locations-service:
 
 Создание базы данных с активностями и локациями.
 
-plans-service:
+####plans-service:
 
 Генерация планов отдыха.
 
-routes-service + departure-service:
+####routes-service + departure-service:
 
 Расчет маршрутов и точек отправления.
 
-pricing-service:
+####pricing-service:
 
 Интеграция с API транспортных компаний.
 
-pdf-service + bot-service:
+####pdf-service + bot-service:
 
 Генерация PDF и Telegram-бот.
