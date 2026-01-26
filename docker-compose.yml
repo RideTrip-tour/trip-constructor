@@ -1,0 +1,51 @@
+services:
+  # PostgreSQL
+  postgres:
+    image: kartoza/postgis:18-3.6
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432 -U $POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - .env
+
+  # Redis
+  redis:
+    image: redis:8.4.0-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    env_file:
+      - .env
+
+
+  gateway-service:
+    build: ./services/gateway-service
+    container_name: gateway-service
+    restart: unless-stopped
+    env_file:
+      - .env
+
+    
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      gateway-service:
+        condition: service_started
+    ports:
+      - "8081:80"
+    volumes:
+      - ./configs/nginx/conf.d:/etc/nginx/conf.d
+    restart: unless-stopped
