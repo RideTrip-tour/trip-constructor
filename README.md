@@ -6,6 +6,7 @@
 ```bash
 git clone git@github.com:RideTrip-tour/trip-constructor.git
 cd trip-constructor
+git submodule update --recursive
 ```
 
 #### 2. Установить Docker и Docker Compose
@@ -34,46 +35,9 @@ docker-compose down
 
 - `DATABASE_URL` — URL подключения к базе данных PostgreSQL.
 - `REDIS_URL` — URL подключения к Redis.
-- `RABBITMQ_URL` — URL подключения к RabbitMQ.
 - `JWT_SECRET_KEY` — Секретный ключ для JWT.
 - Другие параметры можно найти в `.env.example`.
 
-### Разработка
-
-Чтобы начать разработку, выполните следующие шаги:
-
-1. Установите зависимости для каждого микросервиса:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. Для тестирования используйте `pytest`:
-   ```bash
-   pytest
-   ```
-
-3. Для локального запуска отдельных сервисов можно использовать команды FastAPI, например:
-   ```bash
-   uvicorn users-service.main:app --reload
-   ```
-
-### Мониторинг
-
-Мониторинг и визуализация метрик осуществляется с использованием **Prometheus** и **Grafana**. Все метрики доступны через интерфейс Grafana.
-
-### Логи
-
-Логи всех сервисов собираются с использованием **Loki** и **Promtail**, и могут быть просмотрены через интерфейс Grafana.
-
-### Контрибьюция
-
-Мы рады любым улучшениям проекта! Чтобы внести изменения:
-
-1. Форкните репозиторий.
-2. Создайте новую ветку (`git checkout -b feature-name`).
-3. Сделайте изменения и создайте коммит (`git commit -am 'Add new feature'`).
-4. Отправьте ваш фрагмент кода на ваш форк (`git push origin feature-name`).
-5. Создайте Pull Request в основную ветку репозитория.
 
 ### Лицензия
 
