@@ -1,6 +1,6 @@
 [submodule "services/auth-service"]
 	path = services/auth-service
-	url = git@github.com:RideTrip-tour/auth-service.git
+	url = https://github.com/RideTrip-tour/auth-service.git
 	branch = main
 [submodule "services/gateway-service"]
 	path = services/gateway-service
