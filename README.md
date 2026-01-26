@@ -6,6 +6,7 @@
 ```bash
 git clone git@github.com:RideTrip-tour/trip-constructor.git
 cd trip-constructor
+git submodule init
 git submodule update --recursive
 ```
 
