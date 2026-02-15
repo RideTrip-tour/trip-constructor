@@ -8,6 +8,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    ports:
+      - "5433:5432"
     env_file:
       - .env
 
