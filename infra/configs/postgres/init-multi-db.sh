@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+IFS=',' read -ra DBS <<< "$POSTGRES_MULTIPLE_DATABASES"
+
+for db in "${DBS[@]}"; do
+  DB_NAME_VAR="DB_${db^^}_SERVICE_NAME"
+  DB_USER_VAR="DB_${db^^}_SERVICE_USER"
+  DB_PASSWORD_VAR="DB_${db^^}_SERVICE_PASS"
+  
+  DB_NAME="DB_${!DB_NAME_VAR}"
+  DB_USER="DB_${!DB_USER_VAR}"
+  DB_PASSWORD="${!DB_PASSWORD_VAR}"
+
+  echo "Creating database $DB_NAME"
+
+  psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+      CREATE DATABASE $DB_NAME;
+      CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
+      GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
+EOSQL
+
+done

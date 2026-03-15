@@ -3,6 +3,8 @@ services:
   auth-service:
     image: ride2trip/auth-service:${AUTH_SERVICE_VERSION}
     restart: unless-stopped
+    deploy:
+      replicas: 1
     secrets:
       # Auth
       - JWT_SECRET
