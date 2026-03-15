@@ -1,0 +1,161 @@
+services:
+  
+  auth-service:
+    image: ride2trip/auth-service:${AUTH_SERVICE_VERSION}
+    restart: unless-stopped
+    secrets:
+      # Auth
+      - JWT_SECRET
+      - JWT_ALGORITHM
+
+      # Gateway identity
+      - GATEWAY_NAME
+
+      # Debug
+      - DEBUG
+
+      # Redis
+      - REDIS_URL
+      - REDIS_HOST
+      - REDIS_PORT
+
+      # Database
+      - DB_AUTH_SERVICE_HOST
+      - DB_AUTH_SERVICE_PORT
+      - DB_AUTH_SERVICE_NAME
+      - DB_AUTH_SERVICE_USER
+      - DB_AUTH_SERVICE_PASS
+
+      # Email
+      - MAIL_SERVER
+      - MAIL_PORT
+      - MAIL_USERNAME
+      - MAIL_PASSWORD
+      - MAIL_FROM
+      - MAIL_FROM_NAME
+      - MAIL_STARTTLS
+      - MAIL_SSL_TLS
+
+      # OAuth
+      - GOOGLE_OAUTH_CLIENT_ID
+      - GOOGLE_OAUTH_CLIENT_SECRET
+
+      # App URLs
+      - REFRESH_TOKEN_NAME
+    environment:
+      # Auth
+      JWT_SECRET_FILE: /run/secrets/JWT_SECRET
+      JWT_ALGORITHM_FILE: /run/secrets/JWT_ALGORITHM
+
+      # Gateway identity
+      GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+
+      # Debug
+      DEBUG_FILE: /run/secrets/DEBUG
+
+      # Redis
+      REDIS_URL_FILE: /run/secrets/REDIS_URL
+      REDIS_HOST_FILE: /run/secrets/REDIS_HOST
+      REDIS_PORT_FILE: /run/secrets/REDIS_PORT
+
+      # Database
+      DB_AUTH_SERVICE_HOST_FILE: /run/secrets/DB_AUTH_SERVICE_HOST
+      DB_AUTH_SERVICE_PORT_FILE: /run/secrets/DB_AUTH_SERVICE_PORT
+      DB_AUTH_SERVICE_NAME_FILE: /run/secrets/DB_AUTH_SERVICE_NAME
+      DB_AUTH_SERVICE_USER_FILE: /run/secrets/DB_AUTH_SERVICE_USER
+      DB_AUTH_SERVICE_PASS_FILE: /run/secrets/DB_AUTH_SERVICE_PASS
+
+      # Email
+      MAIL_SERVER_FILE: /run/secrets/MAIL_SERVER
+      MAIL_PORT_FILE: /run/secrets/MAIL_PORT
+      MAIL_USERNAME_FILE: /run/secrets/MAIL_USERNAME
+      MAIL_PASSWORD_FILE: /run/secrets/MAIL_PASSWORD
+      MAIL_FROM_FILE: /run/secrets/MAIL_FROM
+      MAIL_FROM_NAME_FILE: /run/secrets/MAIL_FROM_NAME
+      MAIL_STARTTLS_FILE: /run/secrets/MAIL_STARTTLS
+      MAIL_SSL_TLS_FILE: /run/secrets/MAIL_SSL_TLS
+      
+      # Token Expire
+      ACCESS_TOKEN_EXPIRE_SEC: ${ACCESS_TOKEN_EXPIRE_SEC}
+      REFRESH_TOKEN_EXPIRE_SEC: ${REFRESH_TOKEN_EXPIRE_SEC}
+
+      # OAuth
+      GOOGLE_OAUTH_CLIENT_ID_FILE: /run/secrets/GOOGLE_OAUTH_CLIENT_ID
+      GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/GOOGLE_OAUTH_CLIENT_SECRET
+
+      # App URLs
+      ORIGIN: ${ORIGIN}
+      LK_PATH: ${LK_PATH}
+      REFRESH_TOKEN_PATH: ${REFRESH_TOKEN_PATH}
+      REFRESH_TOKEN_NAME_FILE: /run/secrets/REFRESH_TOKEN_NAME
+
+    networks:
+      - internal-network
+      - data-network
+
+networks:
+  internal-network:
+    external: true
+  data-network:
+      external: true
+
+secrets:
+  # Auth
+  JWT_SECRET:
+    external: true
+  JWT_ALGORITHM:
+    external: true
+
+  # Gateway identity
+  GATEWAY_NAME:
+    external: true
+
+  # Debug
+  DEBUG:
+    external: true
+
+  # Redis
+  REDIS_URL:
+    external: true
+  REDIS_TTL:
+    external: true
+
+  # Database
+  DB_HOST:
+    external: true
+  DB_PORT:
+    external: true
+  DB_NAME:
+    external: true
+  DB_USER:
+    external: true
+  DB_PASS:
+    external: true
+
+  # Email
+  MAIL_SERVER:
+    external: true
+  MAIL_PORT:
+    external: true
+  MAIL_USERNAME:
+    external: true
+  MAIL_PASSWORD:
+    external: true
+  MAIL_FROM:
+    external: true
+  MAIL_FROM_NAME:
+    external: true
+  MAIL_STARTTLS:
+    external: true
+  MAIL_SSL_TLS:
+    external: true
+
+  # OAuth
+  GOOGLE_OAUTH_CLIENT_ID:
+    external: true
+  GOOGLE_OAUTH_CLIENT_SECRET:
+    external: true
+
+  # App URLs
+  REFRESH_TOKEN_NAME:
+    external: true

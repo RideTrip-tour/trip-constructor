@@ -1,0 +1,78 @@
+services:
+  # Gateway
+  gateway-service:
+    image: ride2trip/gateway-service:${GATEWAY_SERVICE_VERSION}
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+    secrets:
+      # Auth
+      - JWT_SECRET
+      - JWT_ALGORITHM
+
+      # Gateway identity
+      - GATEWAY_NAME
+
+      # Redis
+      - REDIS_URL
+
+      # Routing
+      - PUBLIC_PATHS
+      - SERVICE_MAP
+
+      # Debug
+      - DEBUG
+    environment:
+      # Auth
+      JWT_SECRET_FILE: /run/secrets/JWT_SECRET
+      JWT_ALGORITHM_FILE: /run/secrets/JWT_ALGORITHM
+
+      # Gateway identity
+      GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+
+      # Redis
+      REDIS_URL_FILE: /run/secrets/REDIS_URL
+
+      # Routing
+      PUBLIC_PATHS_FILE: /run/secrets/PUBLIC_PATHS
+      SERVICE_MAP_FILE: /run/secrets/SERVICE_MAP
+
+      # Debug
+      DEBUG_FILE: /run/secrets/DEBUG
+    ports:
+      - "${GATEWAY_PORT}:8000"
+    networks:
+      - internal-network
+
+networks:
+  internal-network:
+    external: true
+
+secrets:
+  # Runtime
+  gateway_port:
+    external: true
+
+  # Auth
+  JWT_SECRET:
+    external: true
+  JWT_ALGORITHM:
+    external: true
+
+  # Gateway identity
+  GATEWAY_NAME:
+    external: true
+
+  # Redis
+  REDIS_URL:
+    external: true
+
+  # Routing
+  PUBLIC_PATHS:
+    external: true
+  SERVICE_MAP:
+    external: true
+
+  # Debug
+  DEBUG:
+    external: true
