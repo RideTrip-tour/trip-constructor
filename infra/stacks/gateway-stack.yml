@@ -2,9 +2,10 @@ services:
   # Gateway
   gateway-service:
     image: ride2trip/gateway-service:${GATEWAY_SERVICE_VERSION}
-    restart: unless-stopped
     deploy:
       replicas: 1
+      restart_policy:
+        condition: on-failure
     secrets:
       # Auth
       - JWT_SECRET
@@ -43,9 +44,12 @@ services:
       - "${GATEWAY_PORT}:8000"
     networks:
       - internal-network
+      - data-network
 
 networks:
   internal-network:
+    external: true
+  data-network:
     external: true
 
 secrets:

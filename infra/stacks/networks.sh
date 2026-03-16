@@ -11,6 +11,6 @@ for network in "${networks[@]}"; do
     echo "Network '$network' already exists"
   else
     echo "Creating network '$network'"
-    docker network create "$network" >/dev/null
+    docker network create --driver overlay --attachable "$network" >/dev/null
   fi
 done

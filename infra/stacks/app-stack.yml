@@ -2,9 +2,10 @@ services:
   
   auth-service:
     image: ride2trip/auth-service:${AUTH_SERVICE_VERSION}
-    restart: unless-stopped
     deploy:
       replicas: 1
+      restart_policy:
+        condition: on-failure
     secrets:
       # Auth
       - JWT_SECRET
@@ -90,6 +91,9 @@ services:
       LK_PATH: ${LK_PATH}
       REFRESH_TOKEN_PATH: ${REFRESH_TOKEN_PATH}
       REFRESH_TOKEN_NAME_FILE: /run/secrets/REFRESH_TOKEN_NAME
+      
+      # Settings
+      DEPLOY_ENV: swarm
 
     networks:
       - internal-network
@@ -119,19 +123,21 @@ secrets:
   # Redis
   REDIS_URL:
     external: true
-  REDIS_TTL:
+  REDIS_HOST:
+    external: true
+  REDIS_PORT:
     external: true
 
   # Database
-  DB_HOST:
+  DB_AUTH_SERVICE_HOST:
     external: true
-  DB_PORT:
+  DB_AUTH_SERVICE_PORT:
     external: true
-  DB_NAME:
+  DB_AUTH_SERVICE_NAME:
     external: true
-  DB_USER:
+  DB_AUTH_SERVICE_USER:
     external: true
-  DB_PASS:
+  DB_AUTH_SERVICE_PASS:
     external: true
 
   # Email

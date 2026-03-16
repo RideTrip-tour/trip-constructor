@@ -117,3 +117,12 @@ docker stack deploy \
 ---
 
 
+### Локальный запуск
+
+```bash
+sudo docker stack deploy -c infra/stacks/data-stack.yml data
+GATEWAY_SERVICE_VERSION=0.8
+envsubst < infra/stacks/gateway-stack.yml | sudo docker stack deploy -c - gate
+export AUTH_SERVICE_VERSION=0.6.4
+envsubst < infra/stacks/app-stack.yml | sudo docker stack deploy -c - apps
+```
