@@ -72,7 +72,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r services/${{ matrix.service }}/requirements.txt
           python -m pip install ruff
-          python -m pip install pytest
+          python -m pip install -r requirement.test.txt
 
       - name: Lint (ruff)
         if: needs.detect_changes.outputs[matrix.changed_key] == 'true'
