@@ -1,0 +1,202 @@
+name: CI Dev
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || 'ride2trip' }}
+
+jobs:
+  detect_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      auth_changed: ${{ steps.filter.outputs.auth }}
+      gateway_changed: ${{ steps.filter.outputs.gateway }}
+      infra_changed: ${{ steps.filter.outputs.infra }}
+      any_changed: ${{ steps.filter.outputs.auth == 'true' || steps.filter.outputs.gateway == 'true' || steps.filter.outputs.infra == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            auth:
+              - 'services/auth-service/**'
+            gateway:
+              - 'services/gateway-service/**'
+            infra:
+              - 'infra/**'
+      - name: Log detected changes
+        run: |
+          echo "auth_changed=${{ steps.filter.outputs.auth }}"
+          echo "gateway_changed=${{ steps.filter.outputs.gateway }}"
+          echo "infra_changed=${{ steps.filter.outputs.infra }}"
+
+  lint_test:
+    runs-on: ubuntu-latest
+    needs: detect_changes
+    if: github.event_name == 'pull_request' && needs.detect_changes.outputs.any_changed == 'true'
+    strategy:
+      matrix:
+        include:
+          - service: auth-service
+            changed_key: auth_changed
+          - service: gateway-service
+            changed_key: gateway_changed
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        if: needs.detect_changes.outputs[matrix.changed_key] == 'true'
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: services/${{ matrix.service }}/requirements.txt
+
+      - name: Install deps
+        if: needs.detect_changes.outputs[matrix.changed_key] == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r services/${{ matrix.service }}/requirements.txt
+          python -m pip install ruff
+
+      - name: Lint (ruff)
+        if: needs.detect_changes.outputs[matrix.changed_key] == 'true'
+        run: ruff check --select F,E9 services/${{ matrix.service }}
+
+      - name: Tests
+        if: needs.detect_changes.outputs[matrix.changed_key] == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: pytest -q
+
+  build_push:
+    runs-on: ubuntu-latest
+    needs:
+      - detect_changes
+    if: github.event_name == 'push' && (needs.detect_changes.outputs.auth_changed == 'true' || needs.detect_changes.outputs.gateway_changed == 'true')
+    outputs:
+      image_version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Compute version
+        id: version
+        run: echo "version=dev-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push auth-service
+        if: needs.detect_changes.outputs.auth_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: services/auth-service
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/auth-service:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_NAMESPACE }}/auth-service:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push gateway-service
+        if: needs.detect_changes.outputs.gateway_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: services/gateway-service
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/gateway-service:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_NAMESPACE }}/gateway-service:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - detect_changes
+      - build_push
+    if: github.event_name == 'push' && needs.detect_changes.outputs.any_changed == 'true'
+    environment: dev
+    env:
+      AUTH_SERVICE_VERSION: ${{ needs.build_push.outputs.image_version || 'dev' }}
+      GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.image_version || 'dev' }}
+      GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
+      ACCESS_TOKEN_EXPIRE_SEC: ${{ secrets.ACCESS_TOKEN_EXPIRE_SEC }}
+      REFRESH_TOKEN_EXPIRE_SEC: ${{ secrets.REFRESH_TOKEN_EXPIRE_SEC }}
+      ORIGIN: ${{ secrets.ORIGIN }}
+      LK_PATH: ${{ secrets.LK_PATH }}
+      REFRESH_TOKEN_PATH: ${{ secrets.REFRESH_TOKEN_PATH }}
+      DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || 'ride2trip' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y gettext
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SWARM_SSH_PRIVATE_KEY }}
+
+      - name: Add known hosts
+        run: ssh-keyscan -H "${{ secrets.SWARM_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Create docker context
+        run: |
+          docker context create swarm --docker "host=ssh://${{ secrets.SWARM_USER }}@${{ secrets.SWARM_HOST }}"
+          docker --context swarm info
+
+      - name: Run migrations
+        if: needs.detect_changes.outputs.auth_changed == 'true'
+        run: |
+          set -euo pipefail
+          MIGRATE_SERVICE="auth-migrate-${GITHUB_RUN_ID}"
+
+          docker --context swarm service rm "$MIGRATE_SERVICE" || true
+
+          docker --context swarm service create \
+            --name "$MIGRATE_SERVICE" \
+            --restart-condition none \
+            --mode replicated-job \
+            --secret DB_AUTH_SERVICE_HOST \
+            --secret DB_AUTH_SERVICE_PORT \
+            --secret DB_AUTH_SERVICE_NAME \
+            --secret DB_AUTH_SERVICE_USER \
+            --secret DB_AUTH_SERVICE_PASS \
+            --env APP_MODE=migrate \
+            --env DB_AUTH_SERVICE_HOST_FILE=/run/secrets/DB_AUTH_SERVICE_HOST \
+            --env DB_AUTH_SERVICE_PORT_FILE=/run/secrets/DB_AUTH_SERVICE_PORT \
+            --env DB_AUTH_SERVICE_USER_FILE=/run/secrets/DB_AUTH_SERVICE_USER \
+            --with-registry-auth \
+            "${DOCKERHUB_NAMESPACE}/auth-service:${AUTH_SERVICE_VERSION}"
+
+          if ! timeout 300 bash -c "while true; do \
+            state=\"\$(docker --context swarm service ps \"$MIGRATE_SERVICE\" --format '{{.CurrentState}}' | head -n1)\"; \
+            echo \"state=$state\"; \
+            if echo \"$state\" | grep -q 'Complete'; then exit 0; fi; \
+            if echo \"$state\" | grep -qi 'Failed'; then exit 1; fi; \
+            sleep 5; \
+          done"; then
+            docker --context swarm service logs "$MIGRATE_SERVICE" || true
+            docker --context swarm service rm "$MIGRATE_SERVICE" || true
+            exit 1
+          fi
+
+          docker --context swarm service logs "$MIGRATE_SERVICE" || true
+          docker --context swarm service rm "$MIGRATE_SERVICE" || true
+
+      - name: Deploy stacks
+        run: |
+          set -euo pipefail
+          docker --context swarm stack deploy -c infra/stacks/data-stack.yml data
+          envsubst < infra/stacks/gateway-stack.yml | docker --context swarm stack deploy -c - gate
+          envsubst < infra/stacks/app-stack.yml | docker --context swarm stack deploy -c - apps
