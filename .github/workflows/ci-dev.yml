@@ -143,9 +143,9 @@ jobs:
       GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
       ACCESS_TOKEN_EXPIRE_SEC: ${{ secrets.ACCESS_TOKEN_EXPIRE_SEC }}
       REFRESH_TOKEN_EXPIRE_SEC: ${{ secrets.REFRESH_TOKEN_EXPIRE_SEC }}
-      ORIGIN: ${{ secrets.ORIGIN }}
-      LK_PATH: ${{ secrets.LK_PATH }}
-      REFRESH_TOKEN_PATH: ${{ secrets.REFRESH_TOKEN_PATH }}
+      ORIGIN: ${{ vars.ORIGIN }}
+      LK_PATH: ${{ vars.LK_PATH }}
+      REFRESH_TOKEN_PATH: ${{ vars.REFRESH_TOKEN_PATH }}
       DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || 'ride2trip' }}
     steps:
       - uses: actions/checkout@v4
