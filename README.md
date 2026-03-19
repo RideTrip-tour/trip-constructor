@@ -1,138 +1,74 @@
+# Trip Constructor Infra
 
-# Архитектура доставки
+## Что находится в репозитории
 
+Этот репозиторий содержит инфраструктуру и orchestration для сервисов проекта:
 
-Стек:
+* CI/CD через GitHub Actions
+* Docker image build и push в Docker Hub
+* деплой в Docker Swarm
+* stack-файлы для `data`, `gate`, `apps`
+* bootstrap PostgreSQL для сервисных баз
 
-* CI/CD: GitHub Actions
-* Registry: Docker Hub
-* Оркестрация: Docker Swarm
+Основные каталоги:
 
-Схема:
+* `services/` - сервисы проекта
+* `infra/stacks/` - swarm stack-файлы
+* `infra/configs/postgres/` - кастомный postgres image и init-скрипты
+* `.github/workflows/` - CI/CD workflow для dev и prod
 
-```
+## Схема доставки
+
+```text
 developer
-   │
-   ▼
-git push
-   │
-   ▼
+   |
+   v
+git push / git tag
+   |
+   v
 GitHub Actions
-   │
-   ├ tests
-   ├ build docker image
-   ├ push → DockerHub
-   │
-   ▼
-Docker Swarm deploy
+   |
+   +-- lint / tests
+   +-- docker build
+   +-- docker push
+   |
+   v
+Docker Swarm
+   |
+   +-- deploy data
+   +-- run migrations
+   +-- deploy gate/apps
 ```
 
----
+## Git и релизы
 
-# Git-стратегия
+Текущая схема workflow:
 
-```
-main      → production
-develop   → staging
-feature/* → разработка
-```
+* `pull_request -> main` - проверки сервисов
+* `push -> main` - dev build и deploy
+* `push tag v*` - production release
 
-Процесс:
+Релизный pipeline использует единую версию образов по тегу. Это значит, что при `push` тега собираются все релизные образы, участвующие в деплое.
 
-```
-feature branch
-     │
-     ▼
-merge → develop
-     │
-     ▼
-deploy staging
-     │
-     ▼
-tag release
-     │
-     ▼
-deploy production
-```
+## Требования к сервису
 
----
+Минимально новый сервис должен содержать:
 
-# Требования к сервисам
+* `Dockerfile`
+* `requirements.txt`
+* `main.py`
+* `/health` endpoint
 
-Каждый сервис должен иметь:
+Если сервис живет в отдельном репозитории, в нем должен быть свой workflow `pr-checks.yml`, который запускает:
 
-* Dockerfile
-* health endpoint
-* одинаковую схему запуска
+* `ruff`
+* `pytest`
 
-Пример Dockerfile:
+для `pull_request` в `dev` и `main`.
 
-```
-FROM python:3.12
+## Локальный запуск
 
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
----
-
-
-# Подготовка Docker Swarm инфраструктуры
-
-Создать кластер:
-
-```bash
-docker swarm init
-```
-
-Создать overlay network:
-
-```bash
-docker network create \
-  --driver overlay \
-  <Имя_сети>
-```
-
----
-
-# Как проверить ручной деплой
-
-
-Перед CI/CD нужно убедиться, что **деплой работает вручную**.
-
-```
-docker stack deploy \
-  -c docker-compose.prod.yml \
-  <Имя_сети>
-```
-
-Если ручной деплой не работает — CI/CD тоже не будет работать.
-
----
-
-
-### Локальный запуск SWARM
-
-```bash
-sudo docker stack deploy -c infra/stacks/data-stack.yml data
-GATEWAY_SERVICE_VERSION=0.8
-envsubst < infra/stacks/gateway-stack.yml | sudo docker stack deploy -c - gate
-export AUTH_SERVICE_VERSION=0.6.4
-envsubst < infra/stacks/app-stack.yml | sudo docker stack deploy -c - apps
-```
-
-### Локальный запуск Compose
-
-
-### Запуск проекта
-
-#### 1. Клонировать репозиторий
+### Клонирование
 
 ```bash
 git clone git@github.com:RideTrip-tour/trip-constructor.git
@@ -141,62 +77,187 @@ git submodule init
 git submodule update --recursive
 ```
 
-#### 2. Установить Docker и Docker Compose
-
-Проект использует Docker для контейнеризации микросервисов. Для запуска используйте Docker Compose.
-
-#### 3. Запуск с использованием Docker Compose
-
-Для запуска всех сервисов, включая базы данных и очереди, используйте команду:
+### Docker Compose
 
 ```bash
 docker-compose up --build
 ```
 
-#### 4. Остановка сервисов
-
-Чтобы остановить все сервисы, используйте:
+Остановка:
 
 ```bash
 docker-compose down
 ```
 
-#### 5. Настройка переменных окружения
+### Docker Swarm
 
-Для корректной работы проекта необходимо настроить следующие переменные окружения:
+Локальный пример запуска:
 
-- `DATABASE_URL` — URL подключения к базе данных PostgreSQL.
-- `REDIS_URL` — URL подключения к Redis.
-- `JWT_SECRET_KEY` — Секретный ключ для JWT.
-- Другие параметры можно найти в `.env.example`.
+```bash
+docker network create --driver overlay --attachable data-network
+docker network create --driver overlay --attachable internal-network
 
----
+export DOCKERHUB_NAMESPACE=ride2trip
+export POSTGRES_IMAGE_VERSION=dev
+export AUTH_SERVICE_VERSION=dev
+export GATEWAY_SERVICE_VERSION=dev
+export GATEWAY_PORT=8081
+export ORIGIN=https://dev.trip.elmobil.ru
+export LK_PATH=/users/me/
+export REFRESH_TOKEN_PATH=/api/auth/refresh
 
-# Добавление нового сервиса
+envsubst < infra/stacks/data-stack.yml | docker stack deploy -c - data
+envsubst < infra/stacks/gateway-stack.yml | docker stack deploy -c - gate
+envsubst < infra/stacks/app-stack.yml | docker stack deploy -c - apps
+```
 
-При добавлении нового сервиса недостаточно только положить код в `services/`. Нужно обновить инфраструктуру, секреты и, если сервис использует PostgreSQL, создать для него отдельную БД и роль.
+## Docker Swarm bootstrap
+
+### Инициализация кластера
+
+```bash
+docker swarm init
+```
+
+### Создание overlay-сетей
+
+Workflow умеют создавать сети идемпотентно сами, но вручную это выглядит так:
+
+```bash
+docker network create --driver overlay --attachable data-network
+docker network create --driver overlay --attachable internal-network
+```
+
+### Создание secrets
+
+Проверка:
+
+```bash
+docker secret ls
+```
+
+Создание одного секрета:
+
+```bash
+printf '%s' 'value' | docker secret create SECRET_NAME -
+```
+
+Массовое создание из `.env`:
+
+* [create-secrets.sh](/home/viktor/PycharmProjects/trip-constructor/create-secrets.sh)
+
+Важно:
+
+* GitHub `secrets` и Docker Swarm `secrets` это разные сущности
+* stack-файлы используют именно Docker Swarm `secrets`
+
+## PostgreSQL
+
+Для Postgres используется отдельный образ:
+
+* [infra/configs/postgres/Dockerfile](/home/viktor/PycharmProjects/trip-constructor/infra/configs/postgres/Dockerfile)
+
+В него встроены:
+
+* [init-multi-db.sh](/home/viktor/PycharmProjects/trip-constructor/infra/configs/postgres/init-multi-db.sh)
+* [create-service-db.sh](/home/viktor/PycharmProjects/trip-constructor/infra/configs/postgres/create-service-db.sh)
+
+### Что делает init-multi-db.sh
+
+Скрипт выполняется только при первом старте Postgres на пустом volume и создает сервисные базы из списка `POSTGRES_MULTIPLE_DATABASES`.
+
+Это bootstrap-механизм, а не способ дальнейшей эволюции схемы.
+
+### Что делает create-service-db.sh
+
+Это идемпотентный скрипт создания роли и базы для одного сервиса.
+
+Пример:
+
+```bash
+docker exec -it <postgres-container> /usr/local/bin/create-service-db.sh orders
+```
+
+Для `orders` внутри swarm должны существовать secrets:
+
+```text
+DB_ORDERS_SERVICE_NAME
+DB_ORDERS_SERVICE_USER
+DB_ORDERS_SERVICE_PASS
+```
+
+Если Postgres уже инициализирован и volume существует, новый сервис нужно добавлять именно через `create-service-db.sh`, а не ждать повторного выполнения `init-multi-db.sh`.
+
+## CI/CD workflow
+
+### CI Dev
+
+Файл:
+
+* [ci-dev.yml](/home/viktor/PycharmProjects/trip-constructor/.github/workflows/ci-dev.yml)
+
+Что делает:
+
+* определяет измененные части репозитория
+* на PR в `main` запускает `ruff` и `pytest`
+* на push в `main` собирает нужные dev-образы
+* создает swarm-сети при необходимости
+* деплоит `data`
+* ждет готовности Postgres
+* запускает миграции
+* деплоит `gate` и `apps`
+
+### Release Prod
+
+Файл:
+
+* [release-prod.yml](/home/viktor/PycharmProjects/trip-constructor/.github/workflows/release-prod.yml)
+
+Что делает:
+
+* запускается по тегу `v*`
+* всегда собирает все релизные образы
+* деплоит `data`
+* ждет готовности Postgres
+* запускает миграции
+* деплоит `gate` и `apps`
+
+## Ручная проверка деплоя
+
+Перед CI/CD полезно уметь проверить deploy вручную.
+
+Порядок:
+
+```bash
+envsubst < infra/stacks/data-stack.yml | docker stack deploy -c - data
+docker service ls
+docker service logs data_postgres
+
+envsubst < infra/stacks/gateway-stack.yml | docker stack deploy -c - gate
+envsubst < infra/stacks/app-stack.yml | docker stack deploy -c - apps
+docker service ls
+```
+
+Если ручной deploy не работает, CI/CD тоже не будет работать.
+
+## Добавление нового сервиса
+
+При добавлении нового сервиса недостаточно только положить код в `services/`. Нужно обновить deploy-конфигурацию, secrets и при необходимости схему миграций.
 
 ### 1. Добавить код сервиса
 
-Минимально сервис должен содержать:
+Минимум:
 
 * `Dockerfile`
 * `requirements.txt`
 * `main.py`
-* `/health` endpoint
+* `health` endpoint
 
-Если сервис живет в отдельном репозитории, добавьте для него свой workflow:
+### 2. Добавить сервис в stack
 
-* `.github/workflows/pr-checks.yml`
+Обычно сервис описывается в:
 
-Он должен запускать `ruff` и `pytest` для `pull_request` в `dev` и `main`.
-
-### 2. Добавить образ в деплой
-
-Если сервис должен запускаться в Swarm, его нужно описать в stack-файле:
-
-* либо в существующем `infra/stacks/app-stack.yml`
-* либо в отдельном stack-файле, если сервис логически самостоятельный
+* [app-stack.yml](/home/viktor/PycharmProjects/trip-constructor/infra/stacks/app-stack.yml)
 
 Нужно задать:
 
@@ -208,81 +269,123 @@ docker-compose down
 
 ### 3. Добавить swarm secrets
 
-Если сервис использует secrets, их нужно создать в Docker Swarm заранее.
+Если сервис использует runtime secrets, их нужно создать в Swarm заранее.
 
-Проверка:
-
-```bash
-docker secret ls
-```
-
-Создание:
+Пример:
 
 ```bash
 printf '%s' 'value' | docker secret create SECRET_NAME -
 ```
 
-Для массового создания можно использовать:
-
-* [create-secrets.sh](/home/viktor/PycharmProjects/trip-constructor/create-secrets.sh)
-
-### 4. Если сервису нужна PostgreSQL база
-
-Для каждого сервиса используется отдельная база и отдельный пользователь.
+### 4. Если сервису нужна своя PostgreSQL база
 
 Нужно создать secrets:
 
-```bash
+```text
 DB_<SERVICE>_SERVICE_NAME
 DB_<SERVICE>_SERVICE_USER
 DB_<SERVICE>_SERVICE_PASS
 ```
 
-Пример для сервиса `orders`:
+При необходимости также:
+
+```text
+DB_<SERVICE>_SERVICE_HOST
+DB_<SERVICE>_SERVICE_PORT
+```
+
+Пример для `orders`:
 
 ```bash
+printf '%s' 'postgres' | docker secret create DB_ORDERS_SERVICE_HOST -
+printf '%s' '5432' | docker secret create DB_ORDERS_SERVICE_PORT -
 printf '%s' 'orders_db' | docker secret create DB_ORDERS_SERVICE_NAME -
 printf '%s' 'orders_user' | docker secret create DB_ORDERS_SERVICE_USER -
 printf '%s' 'strong-password' | docker secret create DB_ORDERS_SERVICE_PASS -
 ```
 
-Если окружение уже поднято и Postgres volume уже существует, `init-multi-db.sh` заново не выполнится. В этом случае нужно вручную создать БД и роль внутри контейнера Postgres:
+Если это новый пустой environment и база создается при первом старте Postgres, добавь ключ сервиса в `POSTGRES_MULTIPLE_DATABASES` в:
+
+* [data-stack.yml](/home/viktor/PycharmProjects/trip-constructor/infra/stacks/data-stack.yml)
+
+Если Postgres уже был инициализирован раньше, создай БД вручную:
 
 ```bash
 docker exec -it <postgres-container> /usr/local/bin/create-service-db.sh orders
 ```
 
-Скрипт:
+### 5. Если сервису нужны миграции
 
-* [create-service-db.sh](/home/viktor/PycharmProjects/trip-constructor/infra/configs/postgres/create-service-db.sh)
+Логика запуска migration job вынесена в:
 
-Он уже встроен в postgres image и создает роль и базу идемпотентно.
+* [run-swarm-migrations.sh](/home/viktor/PycharmProjects/trip-constructor/infra/run-swarm-migrations.sh)
 
-Если сервис должен создаваться при первичной инициализации пустого Postgres volume, добавьте его ключ в `POSTGRES_MULTIPLE_DATABASES` в:
+Но список сервисов с миграциями сейчас хранится явно в workflow, то есть новый migration-step нужно добавлять вручную в:
 
-* [data-stack.yml](/home/viktor/PycharmProjects/trip-constructor/infra/stacks/data-stack.yml)
+* [ci-dev.yml](/home/viktor/PycharmProjects/trip-constructor/.github/workflows/ci-dev.yml)
+* [release-prod.yml](/home/viktor/PycharmProjects/trip-constructor/.github/workflows/release-prod.yml)
 
-### 5. Добавить переменные и секреты сервиса в stack
+Пример для `orders-service`:
 
-Если сервис использует PostgreSQL, Redis, mail или другие зависимости, нужно:
-
-* подключить соответствующие `secrets` в stack
-* прокинуть `*_FILE` переменные в `environment`
-* убедиться, что сервис подключен к нужным overlay-сетям
-
-### 6. Проверить ручной деплой
-
-Перед merge и CI полезно проверить, что сервис поднимается вручную:
-
-```bash
-docker stack deploy -c infra/stacks/data-stack.yml data
-envsubst < infra/stacks/app-stack.yml | docker stack deploy -c - apps
-docker service ls
-docker service logs <service-name>
+```yaml
+- name: Run orders migrations
+  run: |
+    set -euo pipefail
+    bash infra/run-swarm-migrations.sh \
+      swarm \
+      "$GITHUB_RUN_ID" \
+      orders \
+      "${DOCKERHUB_NAMESPACE}/orders-service:${ORDERS_SERVICE_VERSION}"
 ```
 
-### 7. Что важно помнить
+`service_key` должен совпадать с database secret prefix:
 
-* `docker secret` и GitHub `secrets` это разные сущности
-* новый сервис не создаст БД автоматически, если Postgres уже был инициализирован раньше
-* для production release по тегу должны существовать version-tagged образы всех сервисов, участвующих в деплое
+* `orders` -> `DB_ORDERS_SERVICE_*`
+* `auth` -> `DB_AUTH_SERVICE_*`
+
+Также migration image должен уметь запускаться в режиме миграций, например через `APP_MODE=migrate`.
+
+### 6. Проверить сервис вручную
+
+После добавления сервиса полезно проверить:
+
+```bash
+docker service ls
+docker service logs <service-name>
+docker secret ls
+docker network ls
+```
+
+## Полезные команды
+
+Удалить stack:
+
+```bash
+docker stack rm apps gate data
+```
+
+Удалить volume Postgres:
+
+```bash
+docker volume rm data_postgres-data
+```
+
+Удалить secrets:
+
+```bash
+docker secret ls
+docker secret rm SECRET_NAME
+```
+
+Создать сервисную БД вручную:
+
+```bash
+docker exec -it <postgres-container> /usr/local/bin/create-service-db.sh auth
+```
+
+## Важные замечания
+
+* `init-multi-db.sh` выполняется только на пустом Postgres volume
+* добавление нового сервиса не создает БД автоматически в уже существующем окружении
+* новый сервис с миграциями нужно явно добавить в `ci-dev.yml` и `release-prod.yml`
+* production release ожидает, что все нужные образы существуют с одним и тем же release tag

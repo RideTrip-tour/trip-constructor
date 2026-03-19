@@ -54,7 +54,11 @@ fi
 
 echo "Ensuring role '$db_user' and database '$db_name' exist"
 
-psql "postgresql://${postgres_user}:${postgres_password}@localhost:5432/postgres" \
+export PGPASSWORD="$postgres_password"
+
+psql \
+  -U "$postgres_user" \
+  -d postgres \
   -v ON_ERROR_STOP=1 \
   -v db_name="$db_name" \
   -v db_user="$db_user" \
