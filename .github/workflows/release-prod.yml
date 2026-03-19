@@ -214,9 +214,14 @@ jobs:
 
           if ! timeout 300 bash -c "while true; do \
             state=\"\$(docker --context swarm service ps \"$MIGRATE_SERVICE\" --format '{{.CurrentState}}' | head -n1)\"; \
-            echo \"state=$state\"; \
-            if echo \"$state\" | grep -q 'Complete'; then exit 0; fi; \
-            if echo \"$state\" | grep -qi 'Failed'; then exit 1; fi; \
+            echo \"state=\$state\"; \
+            if [ -z \"\$state\" ]; then \
+              replicas=\"\$(docker --context swarm service ls --filter name=\"$MIGRATE_SERVICE\" --format '{{.Replicas}}' | head -n1)\"; \
+              echo \"replicas=\$replicas\"; \
+              if echo \"\$replicas\" | grep -q '(1/1 completed)'; then exit 0; fi; \
+            fi; \
+            if echo \"\$state\" | grep -q 'Complete'; then exit 0; fi; \
+            if echo \"\$state\" | grep -qi 'Failed\\|Rejected\\|non-zero exit'; then exit 1; fi; \
             sleep 5; \
           done"; then
             docker --context swarm service logs "$MIGRATE_SERVICE" || true
