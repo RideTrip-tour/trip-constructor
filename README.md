@@ -170,3 +170,119 @@ docker-compose down
 - `JWT_SECRET_KEY` — Секретный ключ для JWT.
 - Другие параметры можно найти в `.env.example`.
 
+---
+
+# Добавление нового сервиса
+
+При добавлении нового сервиса недостаточно только положить код в `services/`. Нужно обновить инфраструктуру, секреты и, если сервис использует PostgreSQL, создать для него отдельную БД и роль.
+
+### 1. Добавить код сервиса
+
+Минимально сервис должен содержать:
+
+* `Dockerfile`
+* `requirements.txt`
+* `main.py`
+* `/health` endpoint
+
+Если сервис живет в отдельном репозитории, добавьте для него свой workflow:
+
+* `.github/workflows/pr-checks.yml`
+
+Он должен запускать `ruff` и `pytest` для `pull_request` в `dev` и `main`.
+
+### 2. Добавить образ в деплой
+
+Если сервис должен запускаться в Swarm, его нужно описать в stack-файле:
+
+* либо в существующем `infra/stacks/app-stack.yml`
+* либо в отдельном stack-файле, если сервис логически самостоятельный
+
+Нужно задать:
+
+* `image`
+* `secrets`
+* `environment`
+* `networks`
+* `deploy.restart_policy`
+
+### 3. Добавить swarm secrets
+
+Если сервис использует secrets, их нужно создать в Docker Swarm заранее.
+
+Проверка:
+
+```bash
+docker secret ls
+```
+
+Создание:
+
+```bash
+printf '%s' 'value' | docker secret create SECRET_NAME -
+```
+
+Для массового создания можно использовать:
+
+* [create-secrets.sh](/home/viktor/PycharmProjects/trip-constructor/create-secrets.sh)
+
+### 4. Если сервису нужна PostgreSQL база
+
+Для каждого сервиса используется отдельная база и отдельный пользователь.
+
+Нужно создать secrets:
+
+```bash
+DB_<SERVICE>_SERVICE_NAME
+DB_<SERVICE>_SERVICE_USER
+DB_<SERVICE>_SERVICE_PASS
+```
+
+Пример для сервиса `orders`:
+
+```bash
+printf '%s' 'orders_db' | docker secret create DB_ORDERS_SERVICE_NAME -
+printf '%s' 'orders_user' | docker secret create DB_ORDERS_SERVICE_USER -
+printf '%s' 'strong-password' | docker secret create DB_ORDERS_SERVICE_PASS -
+```
+
+Если окружение уже поднято и Postgres volume уже существует, `init-multi-db.sh` заново не выполнится. В этом случае нужно вручную создать БД и роль внутри контейнера Postgres:
+
+```bash
+docker exec -it <postgres-container> /usr/local/bin/create-service-db.sh orders
+```
+
+Скрипт:
+
+* [create-service-db.sh](/home/viktor/PycharmProjects/trip-constructor/infra/configs/postgres/create-service-db.sh)
+
+Он уже встроен в postgres image и создает роль и базу идемпотентно.
+
+Если сервис должен создаваться при первичной инициализации пустого Postgres volume, добавьте его ключ в `POSTGRES_MULTIPLE_DATABASES` в:
+
+* [data-stack.yml](/home/viktor/PycharmProjects/trip-constructor/infra/stacks/data-stack.yml)
+
+### 5. Добавить переменные и секреты сервиса в stack
+
+Если сервис использует PostgreSQL, Redis, mail или другие зависимости, нужно:
+
+* подключить соответствующие `secrets` в stack
+* прокинуть `*_FILE` переменные в `environment`
+* убедиться, что сервис подключен к нужным overlay-сетям
+
+### 6. Проверить ручной деплой
+
+Перед merge и CI полезно проверить, что сервис поднимается вручную:
+
+```bash
+docker stack deploy -c infra/stacks/data-stack.yml data
+envsubst < infra/stacks/app-stack.yml | docker stack deploy -c - apps
+docker service ls
+docker service logs <service-name>
+```
+
+### 7. Что важно помнить
+
+* `docker secret` и GitHub `secrets` это разные сущности
+* новый сервис не создаст БД автоматически, если Postgres уже был инициализирован раньше
+* для production release по тегу должны существовать version-tagged образы всех сервисов, участвующих в деплое
