@@ -138,8 +138,6 @@ jobs:
       AUTH_SERVICE_VERSION: ${{ needs.build_push.outputs.image_version || github.ref_name }}
       GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.image_version || github.ref_name }}
       GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
-      ACCESS_TOKEN_EXPIRE_SEC: ${{ secrets.ACCESS_TOKEN_EXPIRE_SEC }}
-      REFRESH_TOKEN_EXPIRE_SEC: ${{ secrets.REFRESH_TOKEN_EXPIRE_SEC }}
       ORIGIN: ${{ vars.ORIGIN }}
       LK_PATH: ${{ vars.LK_PATH }}
       REFRESH_TOKEN_PATH: ${{ vars.REFRESH_TOKEN_PATH }}

@@ -39,6 +39,10 @@ services:
       - MAIL_STARTTLS
       - MAIL_SSL_TLS
 
+      # Token Expire
+      - ACCESS_TOKEN_EXPIRE_SEC
+      - REFRESH_TOKEN_EXPIRE_SEC
+
       # OAuth
       - GOOGLE_OAUTH_CLIENT_ID
       - GOOGLE_OAUTH_CLIENT_SECRET
@@ -79,8 +83,8 @@ services:
       MAIL_SSL_TLS_FILE: /run/secrets/MAIL_SSL_TLS
       
       # Token Expire
-      ACCESS_TOKEN_EXPIRE_SEC: ${ACCESS_TOKEN_EXPIRE_SEC}
-      REFRESH_TOKEN_EXPIRE_SEC: ${REFRESH_TOKEN_EXPIRE_SEC}
+      ACCESS_TOKEN_EXPIRE_SEC_FILE: /run/secrets/ACCESS_TOKEN_EXPIRE_SEC
+      REFRESH_TOKEN_EXPIRE_SEC_FILE: /run/secrets/REFRESH_TOKEN_EXPIRE_SEC
 
       # OAuth
       GOOGLE_OAUTH_CLIENT_ID_FILE: /run/secrets/GOOGLE_OAUTH_CLIENT_ID
@@ -157,7 +161,11 @@ secrets:
     external: true
   MAIL_SSL_TLS:
     external: true
-
+  # Token Expire
+  ACCESS_TOKEN_EXPIRE_SEC:
+    external: true
+  REFRESH_TOKEN_EXPIRE_SEC:
+    external: true
   # OAuth
   GOOGLE_OAUTH_CLIENT_ID:
     external: true
