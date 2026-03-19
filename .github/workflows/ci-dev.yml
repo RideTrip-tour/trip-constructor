@@ -180,6 +180,18 @@ jobs:
           docker context create swarm --docker "host=ssh://${{ secrets.SWARM_USER }}@${{ secrets.SWARM_HOST }}"
           docker --context swarm info
 
+      - name: Ensure swarm networks
+        run: |
+          set -euo pipefail
+          for network in data-network internal-network; do
+            if docker --context swarm network inspect "$network" >/dev/null 2>&1; then
+              echo "Network '$network' already exists"
+            else
+              echo "Creating network '$network'"
+              docker --context swarm network create --driver overlay --attachable "$network"
+            fi
+          done
+
       - name: Deploy data stack
         run: |
           set -euo pipefail
