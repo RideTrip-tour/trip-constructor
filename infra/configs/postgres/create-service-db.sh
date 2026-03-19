@@ -36,6 +36,8 @@ db_name="$(cat "$db_name_file")"
 db_user="$(cat "$db_user_file")"
 db_password="$(cat "$db_pass_file")"
 
+echo "Ensuring role '$db_user' and database '$db_name' exist"
+
 postgres_user="${POSTGRES_USER:-}"
 postgres_password="${POSTGRES_PASS:-${POSTGRES_PASSWORD:-}}"
 
@@ -55,8 +57,6 @@ if [[ -z "$postgres_user" || -z "$postgres_password" ]]; then
   echo "POSTGRES_USER/POSTGRES_PASS are not available" >&2
   exit 1
 fi
-
-echo "Ensuring role '$db_user' and database '$db_name' exist"
 
 export PGPASSWORD="$postgres_password"
 
