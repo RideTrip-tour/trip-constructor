@@ -5,3 +5,5 @@ COPY init-multi-db.sh /docker-entrypoint-initdb.d/init-multi-db.sh
 
 RUN chmod +x /usr/local/bin/create-service-db.sh \
     /docker-entrypoint-initdb.d/init-multi-db.sh
+
+ENTRYPOINT ["/bin/bash", "/scripts/docker-entrypoint.sh"]
