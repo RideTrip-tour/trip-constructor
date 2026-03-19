@@ -37,10 +37,14 @@ db_user="$(cat "$db_user_file")"
 db_password="$(cat "$db_pass_file")"
 
 postgres_user="${POSTGRES_USER:-}"
-postgres_password="${POSTGRES_PASSWORD:-}"
+postgres_password="${POSTGRES_PASS:-${POSTGRES_PASSWORD:-}}"
 
 if [[ -z "$postgres_user" && -n "${POSTGRES_USER_FILE:-}" ]]; then
   postgres_user="$(cat "$POSTGRES_USER_FILE")"
+fi
+
+if [[ -z "$postgres_password" && -n "${POSTGRES_PASS_FILE:-}" ]]; then
+  postgres_password="$(cat "$POSTGRES_PASS_FILE")"
 fi
 
 if [[ -z "$postgres_password" && -n "${POSTGRES_PASSWORD_FILE:-}" ]]; then
@@ -48,7 +52,7 @@ if [[ -z "$postgres_password" && -n "${POSTGRES_PASSWORD_FILE:-}" ]]; then
 fi
 
 if [[ -z "$postgres_user" || -z "$postgres_password" ]]; then
-  echo "POSTGRES_USER/POSTGRES_PASSWORD are not available" >&2
+  echo "POSTGRES_USER/POSTGRES_PASS are not available" >&2
   exit 1
 fi
 
