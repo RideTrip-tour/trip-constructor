@@ -163,6 +163,23 @@ jobs:
           docker context create swarm --docker "host=ssh://${{ secrets.SWARM_USER }}@${{ secrets.SWARM_HOST }}"
           docker --context swarm info
 
+      - name: Deploy data stack
+        run: |
+          set -euo pipefail
+          docker --context swarm stack deploy -c infra/stacks/data-stack.yml data
+
+      - name: Wait for postgres
+        run: |
+          set -euo pipefail
+          timeout 300 bash -c 'while true; do
+            replicas="$(docker --context swarm service ls --filter name=data_postgres --format "{{.Replicas}}" | head -n1)"
+            echo "data_postgres replicas=$replicas"
+            if [ "$replicas" = "1/1" ]; then
+              exit 0
+            fi
+            sleep 5
+          done'
+
       - name: Run migrations
         if: needs.detect_changes.outputs.auth_changed == 'true'
         run: |
@@ -175,6 +192,7 @@ jobs:
             --name "$MIGRATE_SERVICE" \
             --restart-condition none \
             --mode replicated-job \
+            --network data-network \
             --secret DB_AUTH_SERVICE_HOST \
             --secret DB_AUTH_SERVICE_PORT \
             --secret DB_AUTH_SERVICE_NAME \
@@ -205,6 +223,5 @@ jobs:
       - name: Deploy stacks
         run: |
           set -euo pipefail
-          docker --context swarm stack deploy -c infra/stacks/data-stack.yml data
           envsubst < infra/stacks/gateway-stack.yml | docker --context swarm stack deploy -c - gate
           envsubst < infra/stacks/app-stack.yml | docker --context swarm stack deploy -c - apps
