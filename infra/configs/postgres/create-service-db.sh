@@ -33,8 +33,7 @@ db_password="$(cat "$db_pass_file")"
 
 pg_password=$(cat "/run/secrets/POSTGRES_PASS")
 pg_user=$(cat "/run/secrets/POSTGRES_USER")
-echo $pg_password
-echo $pg_user
+
 export PGPASSWORD="$pg_password"
 
 psql \
