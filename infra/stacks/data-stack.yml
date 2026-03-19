@@ -8,7 +8,9 @@ services:
         condition: on-failure
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ../configs/postgres/init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh
+    configs:
+      - source: init-multi-db.sh
+        target: /docker-entrypoint-initdb.d/init-multi-db.sh
     secrets:
       - POSTGRES_PASSWORD
       - POSTGRES_USER
@@ -34,7 +36,10 @@ services:
   # Redis
   redis:
     image: redis:8.4.0-alpine
-    restart: unless-stopped
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
     networks:
       - data-network
 
@@ -44,6 +49,10 @@ networks:
 
 volumes:
   postgres-data:
+
+configs:
+  init-multi-db.sh:
+    file: ../configs/postgres/init-multi-db.sh
 
 secrets:
   POSTGRES_PASSWORD:
