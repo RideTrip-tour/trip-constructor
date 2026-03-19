@@ -31,11 +31,14 @@ db_name="$(cat "$db_name_file")"
 db_user="$(cat "$db_user_file")"
 db_password="$(cat "$db_pass_file")"
 
-export PGPASSWORD="$POSTGRES_PASSWORD"
+pg_password=$(cat "/run/secrets/POSTGRES_PASSWORD")
+pg_user=$(cat "/run/secrets/POSTGRES_USER")
+
+export PGPASSWORD="$pg_password"
 
 psql \
   -h 127.0.0.1 \
-  -U "$POSTGRES_USER" \
+  -U "$pg_user" \
   -d postgres \
   -v ON_ERROR_STOP=1 \
   -v db_name="$db_name" \
