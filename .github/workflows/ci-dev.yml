@@ -91,9 +91,11 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - detect_changes
-    if: github.event_name == 'push' && (needs.detect_changes.outputs.auth_changed == 'true' || needs.detect_changes.outputs.gateway_changed == 'true' || needs.detect_changes.outputs.postgres_changed == 'true')
+    if: github.event_name == 'push' && needs.detect_changes.outputs.any_changed == 'true'
     outputs:
-      image_version: ${{ steps.version.outputs.version }}
+      auth_version: ${{ steps.versions.outputs.auth_version }}
+      gateway_version: ${{ steps.versions.outputs.gateway_version }}
+      postgres_version: ${{ steps.versions.outputs.postgres_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -109,6 +111,27 @@ jobs:
       - name: Compute version
         id: version
         run: echo "version=dev-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute deploy versions
+        id: versions
+        run: |
+          if [ "${{ needs.detect_changes.outputs.auth_changed }}" = "true" ]; then
+            echo "auth_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "auth_version=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "${{ needs.detect_changes.outputs.gateway_changed }}" = "true" ]; then
+            echo "gateway_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "gateway_version=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "${{ needs.detect_changes.outputs.postgres_changed }}" = "true" ]; then
+            echo "postgres_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "postgres_version=dev" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and push auth-service
         if: needs.detect_changes.outputs.auth_changed == 'true'
@@ -154,9 +177,9 @@ jobs:
     if: github.event_name == 'push' && needs.detect_changes.outputs.any_changed == 'true'
     environment: DEV
     env:
-      AUTH_SERVICE_VERSION: ${{ needs.build_push.outputs.image_version || 'dev' }}
-      GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.image_version || 'dev' }}
-      POSTGRES_IMAGE_VERSION: ${{ needs.build_push.outputs.image_version || 'dev' }}
+      AUTH_SERVICE_VERSION: ${{ needs.build_push.outputs.auth_version || 'dev' }}
+      GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.gateway_version || 'dev' }}
+      POSTGRES_IMAGE_VERSION: ${{ needs.build_push.outputs.postgres_version || 'dev' }}
       GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
       ORIGIN: ${{ vars.ORIGIN }}
       LK_PATH: ${{ vars.LK_PATH }}

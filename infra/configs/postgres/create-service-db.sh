@@ -57,6 +57,7 @@ echo "Ensuring role '$db_user' and database '$db_name' exist"
 export PGPASSWORD="$postgres_password"
 
 psql \
+  -h 127.0.0.1 \
   -U "$postgres_user" \
   -d postgres \
   -v ON_ERROR_STOP=1 \
