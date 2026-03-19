@@ -7,11 +7,6 @@ Usage: create-service-db.sh <service_key>
 
 Example:
   create-service-db.sh auth
-
-Expected secrets inside the container:
-  /run/secrets/DB_<SERVICE_KEY>_SERVICE_NAME
-  /run/secrets/DB_<SERVICE_KEY>_SERVICE_USER
-  /run/secrets/DB_<SERVICE_KEY>_SERVICE_PASS
 EOF
 }
 
@@ -36,33 +31,11 @@ db_name="$(cat "$db_name_file")"
 db_user="$(cat "$db_user_file")"
 db_password="$(cat "$db_pass_file")"
 
-echo "Ensuring role '$db_user' and database '$db_name' exist"
-
-postgres_user="${POSTGRES_USER:-}"
-postgres_password="${POSTGRES_PASS:-${POSTGRES_PASSWORD:-}}"
-
-if [[ -z "$postgres_user" && -n "${POSTGRES_USER_FILE:-}" ]]; then
-  postgres_user="$(cat "$POSTGRES_USER_FILE")"
-fi
-
-if [[ -z "$postgres_password" && -n "${POSTGRES_PASS_FILE:-}" ]]; then
-  postgres_password="$(cat "$POSTGRES_PASS_FILE")"
-fi
-
-if [[ -z "$postgres_password" && -n "${POSTGRES_PASSWORD_FILE:-}" ]]; then
-  postgres_password="$(cat "$POSTGRES_PASSWORD_FILE")"
-fi
-
-if [[ -z "$postgres_user" || -z "$postgres_password" ]]; then
-  echo "POSTGRES_USER/POSTGRES_PASS are not available" >&2
-  exit 1
-fi
-
-export PGPASSWORD="$postgres_password"
+export PGPASSWORD="$POSTGRES_PASSWORD"
 
 psql \
   -h 127.0.0.1 \
-  -U "$postgres_user" \
+  -U "$POSTGRES_USER" \
   -d postgres \
   -v ON_ERROR_STOP=1 \
   -v db_name="$db_name" \
