@@ -9,7 +9,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     secrets:
-      - POSTGRES_PASSWORD
+      - POSTGRES_PASS
       - POSTGRES_USER
       - DB_AUTH_SERVICE_NAME
       - DB_AUTH_SERVICE_PASS
@@ -18,7 +18,7 @@ services:
       - DB_PROFILE_SERVICE_PASS
       - DB_PROFILE_SERVICE_USER
     environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD
+      POSTGRES_PASS_FILE: /run/secrets/POSTGRES_PASS
       POSTGRES_USER_FILE: /run/secrets/POSTGRES_USER
       POSTGRES_INITDB_WALDIR: ""
       POSTGRES_MULTIPLE_DATABASES: auth,profile
@@ -49,7 +49,7 @@ volumes:
   postgres-data:
 
 secrets:
-  POSTGRES_PASSWORD:
+  POSTGRES_PASS:
     external: true
   POSTGRES_USER:
     external: true
