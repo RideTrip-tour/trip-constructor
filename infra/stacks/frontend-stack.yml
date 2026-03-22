@@ -1,0 +1,9 @@
+services:
+  frontend:
+    image: ${DOCKERHUB_NAMESPACE}/frontend:${FRONTEND_VERSION}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "3000:3000"
