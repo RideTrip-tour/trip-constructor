@@ -7,12 +7,14 @@
 * CI/CD через GitHub Actions
 * Docker image build и push в Docker Hub
 * деплой в Docker Swarm
-* stack-файлы для `data`, `gate`, `apps`
+* stack-файлы для `data`, `gate`, `apps`, `front`
 * bootstrap PostgreSQL для сервисных баз
+* подключение сервисов и frontend через git submodule
 
 Основные каталоги:
 
-* `services/` - сервисы проекта
+* `services/` - backend-сервисы проекта
+* `frontend/` - frontend-сабмодуль
 * `infra/stacks/` - swarm stack-файлы
 * `infra/configs/postgres/` - кастомный postgres image и init-скрипты
 * `.github/workflows/` - CI/CD workflow для dev и prod
@@ -37,38 +39,22 @@ Docker Swarm
    |
    +-- deploy data
    +-- run migrations
-   +-- deploy gate/apps
+   +-- deploy gate/apps/front
 ```
 
 ## Git и релизы
 
 Текущая схема workflow:
 
-* `pull_request -> main` - проверки сервисов
-* `push -> main` - dev build и deploy
+* `pull_request -> main` - проверки backend-сервисов
+* `push -> main` - dev build и deploy на стенд
 * `push tag v*` - production release
+
+Dev pipeline умеет собирать и деплоить `frontend` на стенд.
 
 Релизный pipeline использует единую версию образов по тегу. Это значит, что при `push` тега собираются все релизные образы, участвующие в деплое.
 
-## Требования к сервису
-
-Минимально новый сервис должен содержать:
-
-* `Dockerfile`
-* `requirements.txt`
-* `main.py`
-* `/health` endpoint
-
-Если сервис живет в отдельном репозитории, в нем должен быть свой workflow `pr-checks.yml`, который запускает:
-
-* `ruff`
-* `pytest`
-
-для `pull_request` в `dev` и `main`.
-
-## Локальный запуск
-
-### Клонирование
+## Клонирование
 
 ```bash
 git clone git@github.com:RideTrip-tour/trip-constructor.git
@@ -77,41 +63,20 @@ git submodule init
 git submodule update --recursive
 ```
 
-### Docker Compose
+## Состав submodule
 
-```bash
-docker-compose up --build
-```
+Подключены:
 
-Остановка:
+* `services/auth-service`
+* `services/gateway-service`
+* `frontend`
 
-```bash
-docker-compose down
-```
+Если обновляется submodule, коммитить нужно в двух местах:
 
-### Docker Swarm
+* внутри самого submodule
+* в этом репозитории, чтобы обновить указатель на commit submodule
 
-Локальный пример запуска:
-
-```bash
-docker network create --driver overlay --attachable data-network
-docker network create --driver overlay --attachable internal-network
-
-export DOCKERHUB_NAMESPACE=ride2trip
-export POSTGRES_IMAGE_VERSION=dev
-export AUTH_SERVICE_VERSION=dev
-export GATEWAY_SERVICE_VERSION=dev
-export GATEWAY_PORT=8081
-export ORIGIN=https://dev.trip.elmobil.ru
-export LK_PATH=/users/me/
-export REFRESH_TOKEN_PATH=/api/auth/refresh
-
-envsubst < infra/stacks/data-stack.yml | docker stack deploy -c - data
-envsubst < infra/stacks/gateway-stack.yml | docker stack deploy -c - gate
-envsubst < infra/stacks/app-stack.yml | docker stack deploy -c - apps
-```
-
-## Docker Swarm bootstrap
+## Docker Swarm
 
 ### Инициализация кластера
 
@@ -128,7 +93,68 @@ docker network create --driver overlay --attachable data-network
 docker network create --driver overlay --attachable internal-network
 ```
 
-### Создание secrets
+### Локальный пример deploy
+
+```bash
+export DOCKERHUB_NAMESPACE=ride2trip
+export POSTGRES_IMAGE_VERSION=dev
+export AUTH_SERVICE_VERSION=dev
+export GATEWAY_SERVICE_VERSION=dev
+export FRONTEND_VERSION=dev
+export GATEWAY_PORT=8081
+export ORIGIN=https://dev.trip.elmobil.ru
+export LK_PATH=/users/me/
+export REFRESH_TOKEN_PATH=/api/auth/refresh
+
+envsubst < infra/stacks/data-stack.yml | docker stack deploy -c - data
+envsubst < infra/stacks/gateway-stack.yml | docker stack deploy -c - gate
+envsubst < infra/stacks/app-stack.yml | docker stack deploy -c - apps
+envsubst < infra/stacks/frontend-stack.yml | docker stack deploy -c - front
+```
+
+### Ручной deploy скриптом
+
+Файл:
+
+* [deploy.sh](/home/viktor/PycharmProjects/trip-constructor/infra/deploy.sh)
+
+Он последовательно деплоит:
+
+* `data`
+* `gate`
+* `apps`
+* `front`
+
+## Frontend и внешний nginx
+
+Frontend деплоится отдельным stack `front` и публикует порт `3000` через:
+
+* [frontend-stack.yml](/home/viktor/PycharmProjects/trip-constructor/infra/stacks/frontend-stack.yml)
+
+Frontend container не имеет доступа к внутренним сервисам по overlay-сетям. Маршрутизация делается внешним nginx:
+
+* `/` -> frontend (`127.0.0.1:3000`)
+* `/api/` -> gateway (`127.0.0.1:8081`)
+* `/docs/` -> gateway (`127.0.0.1:8081`)
+
+Это позволяет:
+
+* оставить один публичный origin для браузера
+* избежать CORS между UI и API
+* не давать frontend прямой доступ к внутренним сервисам
+
+Во frontend для production используется относительный API path:
+
+* `VITE_API_URL=`
+* `VITE_API_PREFIX=/api`
+
+Файлы:
+
+* [frontend/nginx.conf](/home/viktor/PycharmProjects/trip-constructor/frontend/nginx.conf)
+* [frontend/src/api/baseUrl.ts](/home/viktor/PycharmProjects/trip-constructor/frontend/src/api/baseUrl.ts)
+* [frontend/src/vite-env.d.ts](/home/viktor/PycharmProjects/trip-constructor/frontend/src/vite-env.d.ts)
+
+## Docker Swarm secrets
 
 Проверка:
 
@@ -150,6 +176,7 @@ printf '%s' 'value' | docker secret create SECRET_NAME -
 
 * GitHub `secrets` и Docker Swarm `secrets` это разные сущности
 * stack-файлы используют именно Docker Swarm `secrets`
+* `GATEWAY_PORT` в CI/CD берется из GitHub Actions secrets
 
 ## PostgreSQL
 
@@ -198,14 +225,15 @@ DB_ORDERS_SERVICE_PASS
 
 Что делает:
 
-* определяет измененные части репозитория
-* на PR в `main` запускает `ruff` и `pytest`
+* определяет измененные части репозитория, включая `frontend`
+* на PR в `main` запускает `ruff` и `pytest` для backend-сервисов
 * на push в `main` собирает нужные dev-образы
+* публикует `frontend:dev` при изменениях во `frontend`
 * создает swarm-сети при необходимости
 * деплоит `data`
 * ждет готовности Postgres
 * запускает миграции
-* деплоит `gate` и `apps`
+* деплоит `gate`, `apps`, `front`
 
 ### Release Prod
 
@@ -213,16 +241,18 @@ DB_ORDERS_SERVICE_PASS
 
 * [release-prod.yml](/home/viktor/PycharmProjects/trip-constructor/.github/workflows/release-prod.yml)
 
-Что делает:
+Что делает сейчас:
 
 * запускается по тегу `v*`
-* всегда собирает все релизные образы
+* собирает и деплоит backend-часть релиза
 * деплоит `data`
 * ждет готовности Postgres
 * запускает миграции
 * деплоит `gate` и `apps`
 
-## Ручная проверка деплоя
+Если нужно, frontend можно добавить в production pipeline отдельно.
+
+## Ручная проверка deploy
 
 Перед CI/CD полезно уметь проверить deploy вручную.
 
@@ -235,12 +265,13 @@ docker service logs data_postgres
 
 envsubst < infra/stacks/gateway-stack.yml | docker stack deploy -c - gate
 envsubst < infra/stacks/app-stack.yml | docker stack deploy -c - apps
+envsubst < infra/stacks/frontend-stack.yml | docker stack deploy -c - front
 docker service ls
 ```
 
 Если ручной deploy не работает, CI/CD тоже не будет работать.
 
-## Добавление нового сервиса
+## Добавление нового backend-сервиса
 
 При добавлении нового сервиса недостаточно только положить код в `services/`. Нужно обновить deploy-конфигурацию, secrets и при необходимости схему миграций.
 
@@ -313,79 +344,3 @@ printf '%s' 'strong-password' | docker secret create DB_ORDERS_SERVICE_PASS -
 ```bash
 docker exec -it <postgres-container> /usr/local/bin/create-service-db.sh orders
 ```
-
-### 5. Если сервису нужны миграции
-
-Логика запуска migration job вынесена в:
-
-* [run-swarm-migrations.sh](/home/viktor/PycharmProjects/trip-constructor/infra/run-swarm-migrations.sh)
-
-Но список сервисов с миграциями сейчас хранится явно в workflow, то есть новый migration-step нужно добавлять вручную в:
-
-* [ci-dev.yml](/home/viktor/PycharmProjects/trip-constructor/.github/workflows/ci-dev.yml)
-* [release-prod.yml](/home/viktor/PycharmProjects/trip-constructor/.github/workflows/release-prod.yml)
-
-Пример для `orders-service`:
-
-```yaml
-- name: Run orders migrations
-  run: |
-    set -euo pipefail
-    bash infra/run-swarm-migrations.sh \
-      swarm \
-      "$GITHUB_RUN_ID" \
-      orders \
-      "${DOCKERHUB_NAMESPACE}/orders-service:${ORDERS_SERVICE_VERSION}"
-```
-
-`service_key` должен совпадать с database secret prefix:
-
-* `orders` -> `DB_ORDERS_SERVICE_*`
-* `auth` -> `DB_AUTH_SERVICE_*`
-
-Также migration image должен уметь запускаться в режиме миграций, например через `APP_MODE=migrate`.
-
-### 6. Проверить сервис вручную
-
-После добавления сервиса полезно проверить:
-
-```bash
-docker service ls
-docker service logs <service-name>
-docker secret ls
-docker network ls
-```
-
-## Полезные команды
-
-Удалить stack:
-
-```bash
-docker stack rm apps gate data
-```
-
-Удалить volume Postgres:
-
-```bash
-docker volume rm data_postgres-data
-```
-
-Удалить secrets:
-
-```bash
-docker secret ls
-docker secret rm SECRET_NAME
-```
-
-Создать сервисную БД вручную:
-
-```bash
-docker exec -it <postgres-container> /usr/local/bin/create-service-db.sh auth
-```
-
-## Важные замечания
-
-* `init-multi-db.sh` выполняется только на пустом Postgres volume
-* добавление нового сервиса не создает БД автоматически в уже существующем окружении
-* новый сервис с миграциями нужно явно добавить в `ci-dev.yml` и `release-prod.yml`
-* production release ожидает, что все нужные образы существуют с одним и тем же release tag
