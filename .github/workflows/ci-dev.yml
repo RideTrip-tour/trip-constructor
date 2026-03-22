@@ -17,9 +17,10 @@ jobs:
     outputs:
       auth_changed: ${{ steps.filter.outputs.auth }}
       gateway_changed: ${{ steps.filter.outputs.gateway }}
+      frontend_changed: ${{ steps.filter.outputs.frontend }}
       infra_changed: ${{ steps.filter.outputs.infra }}
       postgres_changed: ${{ steps.filter.outputs.postgres }}
-      any_changed: ${{ steps.filter.outputs.auth == 'true' || steps.filter.outputs.gateway == 'true' || steps.filter.outputs.infra == 'true' || steps.filter.outputs.postgres == 'true' }}
+      any_changed: ${{ steps.filter.outputs.auth == 'true' || steps.filter.outputs.gateway == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.infra == 'true' || steps.filter.outputs.postgres == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,6 +34,8 @@ jobs:
               - 'services/auth-service/**'
             gateway:
               - 'services/gateway-service/**'
+            frontend:
+              - 'frontend/**'
             infra:
               - 'infra/**'
             postgres:
@@ -41,6 +44,7 @@ jobs:
         run: |
           echo "auth_changed=${{ steps.filter.outputs.auth }}"
           echo "gateway_changed=${{ steps.filter.outputs.gateway }}"
+          echo "frontend_changed=${{ steps.filter.outputs.frontend }}"
           echo "infra_changed=${{ steps.filter.outputs.infra }}"
           echo "postgres_changed=${{ steps.filter.outputs.postgres }}"
 
@@ -95,6 +99,7 @@ jobs:
     outputs:
       auth_version: ${{ steps.versions.outputs.auth_version }}
       gateway_version: ${{ steps.versions.outputs.gateway_version }}
+      frontend_version: ${{ steps.versions.outputs.frontend_version }}
       postgres_version: ${{ steps.versions.outputs.postgres_version }}
     steps:
       - uses: actions/checkout@v4
@@ -127,6 +132,12 @@ jobs:
             echo "gateway_version=dev" >> "$GITHUB_OUTPUT"
           fi
 
+          if [ "${{ needs.detect_changes.outputs.frontend_changed }}" = "true" ]; then
+            echo "frontend_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend_version=dev" >> "$GITHUB_OUTPUT"
+          fi
+
           if [ "${{ needs.detect_changes.outputs.postgres_changed }}" = "true" ]; then
             echo "postgres_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
           else
@@ -157,6 +168,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push frontend
+        if: needs.detect_changes.outputs.frontend_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/frontend:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_NAMESPACE }}/frontend:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Build and push postgres
         if: needs.detect_changes.outputs.postgres_changed == 'true'
         uses: docker/build-push-action@v6
@@ -179,6 +202,7 @@ jobs:
     env:
       AUTH_SERVICE_VERSION: ${{ needs.build_push.outputs.auth_version || 'dev' }}
       GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.gateway_version || 'dev' }}
+      FRONTEND_VERSION: ${{ needs.build_push.outputs.frontend_version || 'dev' }}
       POSTGRES_IMAGE_VERSION: ${{ needs.build_push.outputs.postgres_version || 'dev' }}
       GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
       ORIGIN: ${{ vars.ORIGIN }}
@@ -246,3 +270,4 @@ jobs:
           set -euo pipefail
           envsubst < infra/stacks/gateway-stack.yml | docker --context swarm stack deploy -c - gate
           envsubst < infra/stacks/app-stack.yml | docker --context swarm stack deploy -c - apps
+          envsubst < infra/stacks/frontend-stack.yml | docker --context swarm stack deploy -c - front
