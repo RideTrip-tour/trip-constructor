@@ -13,6 +13,7 @@ stack_files=(
   "$STACKS_DIR/data-stack.yml"
   "$STACKS_DIR/gateway-stack.yml"
   "$STACKS_DIR/app-stack.yml"
+  "$STACKS_DIR/frontend-stack.yml"
 )
 
 missing=0
