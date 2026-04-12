@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       auth_changed: ${{ steps.filter.outputs.auth }}
+      profile_changed: ${{ steps.filter.outputs.profile }}
       gateway_changed: ${{ steps.filter.outputs.gateway }}
       frontend_changed: ${{ steps.filter.outputs.frontend }}
       infra_changed: ${{ steps.filter.outputs.infra }}
