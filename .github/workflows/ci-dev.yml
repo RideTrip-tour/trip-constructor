@@ -21,7 +21,7 @@ jobs:
       frontend_changed: ${{ steps.filter.outputs.frontend }}
       infra_changed: ${{ steps.filter.outputs.infra }}
       postgres_changed: ${{ steps.filter.outputs.postgres }}
-      any_changed: ${{ steps.filter.outputs.auth == 'true' || steps.filter.outputs.gateway == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.infra == 'true' || steps.filter.outputs.postgres == 'true' }}
+      any_changed: ${{ steps.filter.outputs.auth == 'true' || steps.filter.outputs.profile == 'true' || steps.filter.outputs.gateway == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.infra == 'true' || steps.filter.outputs.postgres == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
