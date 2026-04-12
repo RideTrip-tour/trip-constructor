@@ -104,7 +104,7 @@ services:
       - data-network
 
   profile-service:
-    image: ride2trip/prifile-service:${PROFILE_SERVICE_VERSION}
+    image: ride2trip/profile-service:${PROFILE_SERVICE_VERSION}
     deploy:
       replicas: 1
       restart_policy:
