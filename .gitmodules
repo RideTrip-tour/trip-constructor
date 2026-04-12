@@ -8,3 +8,6 @@
 [submodule "frontend"]
 	path = frontend
 	url = git@github.com:RideTrip-tour/frontend.git
+[submodule "services/profile-service"]
+	path = services/profile-service
+	url = git@github.com:RideTrip-tour/profiles-service.git

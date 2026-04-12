@@ -32,6 +32,8 @@ jobs:
           filters: |
             auth:
               - 'services/auth-service/**'
+            profile:
+              - 'services/profile-service/**'
             gateway:
               - 'services/gateway-service/**'
             frontend:
@@ -43,6 +45,7 @@ jobs:
       - name: Log detected changes
         run: |
           echo "auth_changed=${{ steps.filter.outputs.auth }}"
+          echo "profile_changed=${{ steps.filter.outputs.profile }}"
           echo "gateway_changed=${{ steps.filter.outputs.gateway }}"
           echo "frontend_changed=${{ steps.filter.outputs.frontend }}"
           echo "infra_changed=${{ steps.filter.outputs.infra }}"
@@ -57,6 +60,8 @@ jobs:
         include:
           - service: auth-service
             changed_key: auth_changed
+          - service: profile-service
+            changed_key: profile_changed
           - service: gateway-service
             changed_key: gateway_changed
     steps:
@@ -98,6 +103,7 @@ jobs:
     if: github.event_name == 'push' && needs.detect_changes.outputs.any_changed == 'true'
     outputs:
       auth_version: ${{ steps.versions.outputs.auth_version }}
+      profile_version: ${{ steps.versions.outputs.profile_version }}
       gateway_version: ${{ steps.versions.outputs.gateway_version }}
       frontend_version: ${{ steps.versions.outputs.frontend_version }}
       postgres_version: ${{ steps.versions.outputs.postgres_version }}
@@ -124,6 +130,12 @@ jobs:
             echo "auth_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
           else
             echo "auth_version=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "${{ needs.detect_changes.outputs.profile_changed }}" = "true" ]; then
+            echo "profile_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "profile_version=dev" >> "$GITHUB_OUTPUT"
           fi
 
           if [ "${{ needs.detect_changes.outputs.gateway_changed }}" = "true" ]; then
@@ -153,6 +165,18 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_NAMESPACE }}/auth-service:${{ steps.version.outputs.version }}
             ${{ env.DOCKERHUB_NAMESPACE }}/auth-service:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push profile-service
+        if: needs.detect_changes.outputs.profile_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: services/profile-service
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/profile-service:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_NAMESPACE }}/profile-service:dev
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -201,6 +225,7 @@ jobs:
     environment: DEV
     env:
       AUTH_SERVICE_VERSION: ${{ needs.build_push.outputs.auth_version || 'dev' }}
+      PROFILE_SERVICE_VERSION: ${{ needs.build_push.outputs.profile_version || 'dev' }}
       GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.gateway_version || 'dev' }}
       FRONTEND_VERSION: ${{ needs.build_push.outputs.frontend_version || 'dev' }}
       POSTGRES_IMAGE_VERSION: ${{ needs.build_push.outputs.postgres_version || 'dev' }}
@@ -264,6 +289,15 @@ jobs:
             "$GITHUB_RUN_ID" \
             auth \
             "${DOCKERHUB_NAMESPACE}/auth-service:${AUTH_SERVICE_VERSION}"
+
+      - name: Run profile migrations
+        run: |
+          set -euo pipefail
+          bash infra/run-swarm-migrations.sh \
+            swarm \
+            "$GITHUB_RUN_ID" \
+            auth \
+            "${DOCKERHUB_NAMESPACE}/profile-service:${AUTH_SERVICE_VERSION}"
 
       - name: Deploy stacks
         run: |

@@ -103,6 +103,69 @@ services:
       - internal-network
       - data-network
 
+  profile-service:
+    image: ride2trip/prifile-service:${PROFILE_SERVICE_VERSION}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    secrets:
+      # Auth
+      - JWT_SECRET
+      - JWT_ALGORITHM
+
+      # Gateway identity
+      - GATEWAY_NAME
+
+      # Debug
+      - DEBUG
+
+      # Redis
+      - REDIS_URL
+      - REDIS_HOST
+      - REDIS_PORT
+
+      # Database
+      - DB_PROFILE_SERVICE_HOST
+      - DB_PROFILE_SERVICE_PORT
+      - DB_PROFILE_SERVICE_NAME
+      - DB_PROFILE_SERVICE_USER
+      - DB_PROFILE_SERVICE_PASS
+
+      
+    environment:
+      # Auth
+      JWT_SECRET_FILE: /run/secrets/JWT_SECRET
+      JWT_ALGORITHM_FILE: /run/secrets/JWT_ALGORITHM
+
+      # Gateway identity
+      GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+
+      # Debug
+      DEBUG_FILE: /run/secrets/DEBUG
+
+      # Redis
+      REDIS_URL_FILE: /run/secrets/REDIS_URL
+      REDIS_HOST_FILE: /run/secrets/REDIS_HOST
+      REDIS_PORT_FILE: /run/secrets/REDIS_PORT
+
+      # Database
+      DB_PROFILE_SERVICE_HOST_FILE: /run/secrets/DB_PROFILE_SERVICE_HOST
+      DB_PROFILE_SERVICE_PORT_FILE: /run/secrets/DB_PROFILE_SERVICE_PORT
+      DB_PROFILE_SERVICE_NAME_FILE: /run/secrets/DB_PROFILE_SERVICE_NAME
+      DB_PROFILE_SERVICE_USER_FILE: /run/secrets/DB_PROFILE_SERVICE_USER
+      DB_PROFILE_SERVICE_PASS_FILE: /run/secrets/DB_PROFILE_SERVICE_PASS
+
+      
+      # Settings
+      DEPLOY_ENV: swarm
+
+    networks:
+      - internal-network
+      - data-network
+
+
+
 networks:
   internal-network:
     external: true
@@ -132,7 +195,7 @@ secrets:
   REDIS_PORT:
     external: true
 
-  # Database
+  # Database AUTH
   DB_AUTH_SERVICE_HOST:
     external: true
   DB_AUTH_SERVICE_PORT:
@@ -142,6 +205,18 @@ secrets:
   DB_AUTH_SERVICE_USER:
     external: true
   DB_AUTH_SERVICE_PASS:
+    external: true
+
+  # Database PROFILE
+  DB_PROFILE_SERVICE_HOST:
+    external: true
+  DB_PROFILE_SERVICE_PORT:
+    external: true
+  DB_PROFILE_SERVICE_NAME:
+    external: true
+  DB_PROFILE_SERVICE_USER:
+    external: true
+  DB_PROFILE_SERVICE_PASS:
     external: true
 
   # Email
