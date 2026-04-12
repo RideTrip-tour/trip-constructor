@@ -297,8 +297,8 @@ jobs:
           bash infra/run-swarm-migrations.sh \
             swarm \
             "$GITHUB_RUN_ID" \
-            auth \
-            "${DOCKERHUB_NAMESPACE}/profile-service:${AUTH_SERVICE_VERSION}"
+            profile \
+            "${DOCKERHUB_NAMESPACE}/profile-service:${PROFILE_SERVICE_VERSION}"
 
       - name: Deploy stacks
         run: |
