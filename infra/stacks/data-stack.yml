@@ -67,3 +67,9 @@ secrets:
     external: true
   DB_PROFILE_SERVICE_USER:
     external: true
+  DB_LOCATION_SERVICE_NAME:
+    external: true
+  DB_LOCATION_SERVICE_PASS:
+    external: true
+  DB_LOCATION_SERVICE_USER:
+    external: true
