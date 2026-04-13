@@ -11,3 +11,6 @@
 [submodule "services/profile-service"]
 	path = services/profile-service
 	url = git@github.com:RideTrip-tour/profiles-service.git
+[submodule "services/location-service"]
+	path = services/location-service
+	url = git@github.com:RideTrip-tour/locations-service.git
