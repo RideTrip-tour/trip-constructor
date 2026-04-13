@@ -280,6 +280,18 @@ secrets:
   DB_PROFILE_SERVICE_PASS:
     external: true
 
+  # Database LOCATION
+  DB_LOCATION_SERVICE_HOST:
+    external: true
+  DB_LOCATION_SERVICE_PORT:
+    external: true
+  DB_LOCATION_SERVICE_NAME:
+    external: true
+  DB_LOCATION_SERVICE_USER:
+    external: true
+  DB_LOCATION_SERVICE_PASS:
+    external: true
+
   # Email
   MAIL_SERVER:
     external: true
