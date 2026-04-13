@@ -333,7 +333,7 @@ jobs:
             swarm \
             "$GITHUB_RUN_ID" \
             location \
-            "${DOCKERHUB_NAMESPACE}/location-service:${LOCATIN_SERVICE_VERSION}"
+            "${DOCKERHUB_NAMESPACE}/location-service:${LOCATION_SERVICE_VERSION}"
 
       - name: Deploy stacks
         run: |
