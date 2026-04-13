@@ -17,11 +17,12 @@ jobs:
     outputs:
       auth_changed: ${{ steps.filter.outputs.auth }}
       profile_changed: ${{ steps.filter.outputs.profile }}
+      location_changed: ${{ steps.filter.outputs.location }}
       gateway_changed: ${{ steps.filter.outputs.gateway }}
       frontend_changed: ${{ steps.filter.outputs.frontend }}
       infra_changed: ${{ steps.filter.outputs.infra }}
       postgres_changed: ${{ steps.filter.outputs.postgres }}
-      any_changed: ${{ steps.filter.outputs.auth == 'true' || steps.filter.outputs.profile == 'true' || steps.filter.outputs.gateway == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.infra == 'true' || steps.filter.outputs.postgres == 'true' }}
+      any_changed: ${{ steps.filter.outputs.auth == 'true' || steps.filter.outputs.profile == 'true' || steps.filter.outputs.location == 'true' || steps.filter.outputs.gateway == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.infra == 'true' || steps.filter.outputs.postgres == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,6 +36,8 @@ jobs:
               - 'services/auth-service/**'
             profile:
               - 'services/profile-service/**'
+            location:
+              - 'services/location-service/**'
             gateway:
               - 'services/gateway-service/**'
             frontend:
@@ -47,6 +50,7 @@ jobs:
         run: |
           echo "auth_changed=${{ steps.filter.outputs.auth }}"
           echo "profile_changed=${{ steps.filter.outputs.profile }}"
+          echo "location_changed=${{ steps.filter.outputs.location }}"
           echo "gateway_changed=${{ steps.filter.outputs.gateway }}"
           echo "frontend_changed=${{ steps.filter.outputs.frontend }}"
           echo "infra_changed=${{ steps.filter.outputs.infra }}"
@@ -63,6 +67,8 @@ jobs:
             changed_key: auth_changed
           - service: profile-service
             changed_key: profile_changed
+          - service: location-service
+            changed_key: location_changed
           - service: gateway-service
             changed_key: gateway_changed
     steps:
@@ -105,6 +111,7 @@ jobs:
     outputs:
       auth_version: ${{ steps.versions.outputs.auth_version }}
       profile_version: ${{ steps.versions.outputs.profile_version }}
+      location_version: ${{ steps.versions.outputs.location_version }}
       gateway_version: ${{ steps.versions.outputs.gateway_version }}
       frontend_version: ${{ steps.versions.outputs.frontend_version }}
       postgres_version: ${{ steps.versions.outputs.postgres_version }}
@@ -135,6 +142,12 @@ jobs:
 
           if [ "${{ needs.detect_changes.outputs.profile_changed }}" = "true" ]; then
             echo "profile_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "profile_version=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "${{ needs.detect_changes.outputs.location_changed }}" = "true" ]; then
+            echo "location_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
           else
             echo "profile_version=dev" >> "$GITHUB_OUTPUT"
           fi
@@ -178,6 +191,18 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_NAMESPACE }}/profile-service:${{ steps.version.outputs.version }}
             ${{ env.DOCKERHUB_NAMESPACE }}/profile-service:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Build and push location-service
+        if: needs.detect_changes.outputs.location_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: services/location-service
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/location-service:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_NAMESPACE }}/location-service:dev
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -227,6 +252,7 @@ jobs:
     env:
       AUTH_SERVICE_VERSION: ${{ needs.build_push.outputs.auth_version || 'dev' }}
       PROFILE_SERVICE_VERSION: ${{ needs.build_push.outputs.profile_version || 'dev' }}
+      LOCATION_SERVICE_VERSION: ${{ needs.build_push.outputs.location_version || 'dev' }}
       GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.gateway_version || 'dev' }}
       FRONTEND_VERSION: ${{ needs.build_push.outputs.frontend_version || 'dev' }}
       POSTGRES_IMAGE_VERSION: ${{ needs.build_push.outputs.postgres_version || 'dev' }}
@@ -299,6 +325,15 @@ jobs:
             "$GITHUB_RUN_ID" \
             profile \
             "${DOCKERHUB_NAMESPACE}/profile-service:${PROFILE_SERVICE_VERSION}"
+
+      - name: Run location migrations
+        run: |
+          set -euo pipefail
+          bash infra/run-swarm-migrations.sh \
+            swarm \
+            "$GITHUB_RUN_ID" \
+            location \
+            "${DOCKERHUB_NAMESPACE}/location-service:${LOCATIN_SERVICE_VERSION}"
 
       - name: Deploy stacks
         run: |
