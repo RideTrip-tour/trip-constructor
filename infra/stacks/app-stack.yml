@@ -13,6 +13,8 @@ services:
 
       # Gateway identity
       - GATEWAY_NAME
+      - AUTH_SERVICE_TOKEN
+      - GATEWAY_URL
 
       # Debug
       - DEBUG
@@ -38,10 +40,13 @@ services:
       - MAIL_FROM_NAME
       - MAIL_STARTTLS
       - MAIL_SSL_TLS
+      - SUPPORT_EMAIL
 
       # Token Expire
       - ACCESS_TOKEN_EXPIRE_SEC
       - REFRESH_TOKEN_EXPIRE_SEC
+      - RESET_PASSWORD_TOKEN_LIFETIME_SECONDS
+      - VERIFICATION_TOKEN_LIFETIME_SECONDS
 
       # OAuth
       - GOOGLE_OAUTH_CLIENT_ID
@@ -56,6 +61,8 @@ services:
 
       # Gateway identity
       GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+      AUTH_SERVICE_TOKEN_FILE: /run/secrets/AUTH_SERVICE_TOKEN
+      GATEWAY_URL_FILE: /run/secrets/GATEWAY_URL
 
       # Debug
       DEBUG_FILE: /run/secrets/DEBUG
@@ -81,10 +88,13 @@ services:
       MAIL_FROM_NAME_FILE: /run/secrets/MAIL_FROM_NAME
       MAIL_STARTTLS_FILE: /run/secrets/MAIL_STARTTLS
       MAIL_SSL_TLS_FILE: /run/secrets/MAIL_SSL_TLS
+      SUPPORT_EMAIL_FILE: /run/secrets/SUPPORT_EMAIL
       
       # Token Expire
       ACCESS_TOKEN_EXPIRE_SEC_FILE: /run/secrets/ACCESS_TOKEN_EXPIRE_SEC
       REFRESH_TOKEN_EXPIRE_SEC_FILE: /run/secrets/REFRESH_TOKEN_EXPIRE_SEC
+      RESET_PASSWORD_TOKEN_LIFETIME_SECONDS_FILE: /run/secrets/RESET_PASSWORD_TOKEN_LIFETIME_SECONDS
+      VERIFICATION_TOKEN_LIFETIME_SECONDS_FILE: /run/secrets/VERIFICATION_TOKEN_LIFETIME_SECONDS
 
       # OAuth
       GOOGLE_OAUTH_CLIENT_ID_FILE: /run/secrets/GOOGLE_OAUTH_CLIENT_ID
@@ -93,6 +103,7 @@ services:
       # App URLs
       ORIGIN: ${ORIGIN}
       LK_PATH: ${LK_PATH}
+      PASSWORD_RECOVERY_PATH: ${PASSWORD_RECOVERY_PATH}
       REFRESH_TOKEN_PATH: ${REFRESH_TOKEN_PATH}
       REFRESH_TOKEN_NAME_FILE: /run/secrets/REFRESH_TOKEN_NAME
       
@@ -116,6 +127,8 @@ services:
 
       # Gateway identity
       - GATEWAY_NAME
+      - PROFILE_SERVICE_TOKEN
+      - GATEWAY_URL
 
       # Debug
       - DEBUG
@@ -140,6 +153,8 @@ services:
 
       # Gateway identity
       GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+      PROFILE_SERVICE_TOKEN_FILE: /run/secrets/PROFILE_SERVICE_TOKEN
+      GATEWAY_URL_FILE: /run/secrets/GATEWAY_URL
 
       # Debug
       DEBUG_FILE: /run/secrets/DEBUG
@@ -177,6 +192,8 @@ services:
 
       # Gateway identity
       - GATEWAY_NAME
+      - LOCATION_SERVICE_TOKEN
+      - GATEWAY_URL
 
       # Debug
       - DEBUG
@@ -201,6 +218,8 @@ services:
 
       # Gateway identity
       GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+      LOCATION_SERVICE_TOKEN_FILE: /run/secrets/LOCATION_SERVICE_TOKEN
+      GATEWAY_URL_FILE: /run/secrets/GATEWAY_URL
 
       # Debug
       DEBUG_FILE: /run/secrets/DEBUG
@@ -242,6 +261,14 @@ secrets:
 
   # Gateway identity
   GATEWAY_NAME:
+    external: true
+  GATEWAY_URL:
+    external: true
+  LOCATION_SERVICE_TOKEN:
+    external: true
+  PROFILE_SERVICE_TOKEN:
+    external: true
+  AUTH_SERVICE_TOKEN:
     external: true
 
   # Debug
@@ -309,10 +336,16 @@ secrets:
     external: true
   MAIL_SSL_TLS:
     external: true
+  SUPPORT_EMAIL:
+    external: true
   # Token Expire
   ACCESS_TOKEN_EXPIRE_SEC:
     external: true
   REFRESH_TOKEN_EXPIRE_SEC:
+    external: true
+  RESET_PASSWORD_TOKEN_LIFETIME_SECONDS:
+    external: true
+  VERIFICATION_TOKEN_LIFETIME_SECONDS:
     external: true
   # OAuth
   GOOGLE_OAUTH_CLIENT_ID:
