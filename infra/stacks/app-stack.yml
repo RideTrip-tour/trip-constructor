@@ -13,6 +13,8 @@ services:
 
       # Gateway identity
       - GATEWAY_NAME
+      - AUTH_SERVICE_TOKEN
+      - GATEWAY_URL
 
       # Debug
       - DEBUG
@@ -59,6 +61,8 @@ services:
 
       # Gateway identity
       GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+      AUTH_SERVICE_TOKEN_FILE: /run/secrets/AUTH_SERVICE_TOKEN
+      GATEWAY_URL_FILE: /run/secrets/GATEWAY_URL
 
       # Debug
       DEBUG_FILE: /run/secrets/DEBUG
@@ -123,6 +127,8 @@ services:
 
       # Gateway identity
       - GATEWAY_NAME
+      - PROFILE_SERVICE_TOKEN
+      - GATEWAY_URL
 
       # Debug
       - DEBUG
@@ -147,6 +153,8 @@ services:
 
       # Gateway identity
       GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+      PROFILE_SERVICE_TOKEN_FILE: /run/secrets/PROFILE_SERVICE_TOKEN
+      GATEWAY_URL_FILE: /run/secrets/GATEWAY_URL
 
       # Debug
       DEBUG_FILE: /run/secrets/DEBUG
@@ -184,6 +192,8 @@ services:
 
       # Gateway identity
       - GATEWAY_NAME
+      - LOCATION_SERVICE_TOKEN
+      - GATEWAY_URL
 
       # Debug
       - DEBUG
@@ -208,6 +218,8 @@ services:
 
       # Gateway identity
       GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
+      LOCATION_SERVICE_TOKEN_FILE: /run/secrets/LOCATION_SERVICE_TOKEN
+      GATEWAY_URL_FILE: /run/secrets/GATEWAY_URL
 
       # Debug
       DEBUG_FILE: /run/secrets/DEBUG
@@ -249,6 +261,14 @@ secrets:
 
   # Gateway identity
   GATEWAY_NAME:
+    external: true
+  GATEWAY_URL:
+    external: true
+  LOCATION_SERVICE_TOKEN:
+    external: true
+  PROFILE_SERVICE_TOKEN:
+    external: true
+  AUTH_SERVICE_TOKEN:
     external: true
 
   # Debug
