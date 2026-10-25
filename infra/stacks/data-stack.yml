@@ -35,8 +35,6 @@ services:
       DB_LOCATION_SERVICE_NAME_FILE: /run/secrets/DB_LOCATION_SERVICE_NAME
       DB_LOCATION_SERVICE_PASS_FILE: /run/secrets/DB_LOCATION_SERVICE_PASS
       DB_LOCATION_SERVICE_USER_FILE: /run/secrets/DB_LOCATION_SERVICE_USER
-    ports:
-      - "${DB_PORT}:5432"
     networks:
       - data-network
 
