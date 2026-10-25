@@ -149,7 +149,7 @@ jobs:
           if [ "${{ needs.detect_changes.outputs.location_changed }}" = "true" ]; then
             echo "location_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
           else
-            echo "profile_version=dev" >> "$GITHUB_OUTPUT"
+            echo "location_version=dev" >> "$GITHUB_OUTPUT"
           fi
 
           if [ "${{ needs.detect_changes.outputs.gateway_changed }}" = "true" ]; then
