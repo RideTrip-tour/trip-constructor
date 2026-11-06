@@ -14,3 +14,9 @@
 [submodule "services/location-service"]
 	path = services/location-service
 	url = git@github.com:RideTrip-tour/locations-service.git
+[submodule "services/transport-service"]
+	path = services/transport-service
+	url = https://github.com/RideTrip-tour/transport-service.git
+[submodule "services/accommodation-service"]
+	path = services/accommodation-service
+	url = https://github.com/RideTrip-tour/accommodation-service.git
