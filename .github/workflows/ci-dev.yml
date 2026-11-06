@@ -19,6 +19,8 @@ jobs:
       profile_changed: ${{ steps.filter.outputs.profile }}
       location_changed: ${{ steps.filter.outputs.location }}
       gateway_changed: ${{ steps.filter.outputs.gateway }}
+      transport_changed: ${{ steps.filter.outputs.transport }}
+      accommodation_changed: ${{ steps.filter.outputs.accommodation }}
       frontend_changed: ${{ steps.filter.outputs.frontend }}
       infra_changed: ${{ steps.filter.outputs.infra }}
       postgres_changed: ${{ steps.filter.outputs.postgres }}
@@ -40,6 +42,10 @@ jobs:
               - 'services/location-service/**'
             gateway:
               - 'services/gateway-service/**'
+            transport:
+              - 'services/transport-service/**'
+            accommodation:
+              - 'services/accommodation-service/**'
             frontend:
               - 'frontend/**'
             infra:
@@ -52,6 +58,8 @@ jobs:
           echo "profile_changed=${{ steps.filter.outputs.profile }}"
           echo "location_changed=${{ steps.filter.outputs.location }}"
           echo "gateway_changed=${{ steps.filter.outputs.gateway }}"
+          echo "transport_changed=${{ steps.filter.outputs.transport }}"
+          echo "accommodation_changed=${{ steps.filter.outputs.accommodation }}"
           echo "frontend_changed=${{ steps.filter.outputs.frontend }}"
           echo "infra_changed=${{ steps.filter.outputs.infra }}"
           echo "postgres_changed=${{ steps.filter.outputs.postgres }}"
@@ -71,6 +79,10 @@ jobs:
             changed_key: location_changed
           - service: gateway-service
             changed_key: gateway_changed
+          - service: transport-service
+            changed_key: transport_changed
+          - service: accommodation-service
+            changed_key: accommodation_changed
     steps:
       - uses: actions/checkout@v4
         with:
@@ -113,6 +125,8 @@ jobs:
       profile_version: ${{ steps.versions.outputs.profile_version }}
       location_version: ${{ steps.versions.outputs.location_version }}
       gateway_version: ${{ steps.versions.outputs.gateway_version }}
+      transport_version: ${{ steps.versions.outputs.transport_version }}
+      accommodation_version: ${{ steps.versions.outputs.accommodation_version }}
       frontend_version: ${{ steps.versions.outputs.frontend_version }}
       postgres_version: ${{ steps.versions.outputs.postgres_version }}
     steps:
@@ -156,6 +170,18 @@ jobs:
             echo "gateway_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
           else
             echo "gateway_version=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "${{ needs.detect_changes.outputs.transport_changed }}" = "true" ]; then
+            echo "transport_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "transport_version=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "${{ needs.detect_changes.outputs.accommodation_changed }}" = "true" ]; then
+            echo "accommodation_version=${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "accommodation_version=dev" >> "$GITHUB_OUTPUT"
           fi
 
           if [ "${{ needs.detect_changes.outputs.frontend_changed }}" = "true" ]; then
@@ -218,6 +244,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push transport-service
+        if: needs.detect_changes.outputs.transport_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: services/transport-service
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/transport-service:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_NAMESPACE }}/transport-service:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push accommodation-service
+        if: needs.detect_changes.outputs.accommodation_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: services/accommodation-service
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_NAMESPACE }}/accommodation-service:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_NAMESPACE }}/accommodation-service:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Build and push frontend
         if: needs.detect_changes.outputs.frontend_changed == 'true'
         uses: docker/build-push-action@v6
@@ -254,6 +304,8 @@ jobs:
       PROFILE_SERVICE_VERSION: ${{ needs.build_push.outputs.profile_version || 'dev' }}
       LOCATION_SERVICE_VERSION: ${{ needs.build_push.outputs.location_version || 'dev' }}
       GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.gateway_version || 'dev' }}
+      TRANSPORT_SERVICE_VERSION: ${{ needs.build_push.outputs.transport_version || 'dev' }}
+      ACCOMMODATIO_SERVICE_VERSION: ${{ needs.build_push.outputs.accommodation_version || 'dev' }}
       FRONTEND_VERSION: ${{ needs.build_push.outputs.frontend_version || 'dev' }}
       POSTGRES_IMAGE_VERSION: ${{ needs.build_push.outputs.postgres_version || 'dev' }}
       GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
@@ -334,6 +386,24 @@ jobs:
             "$GITHUB_RUN_ID" \
             location \
             "${DOCKERHUB_NAMESPACE}/location-service:${LOCATION_SERVICE_VERSION}"
+
+      - name: Run transport migrations
+        run: |
+          set -euo pipefail
+          bash infra/run-swarm-migrations.sh \
+            swarm \
+            "$GITHUB_RUN_ID" \
+            transport \
+            "${DOCKERHUB_NAMESPACE}/transport-service:${TRANSPORT_SERVICE_VERSION}"
+      
+      - name: Run accommodation migrations
+        run: |
+          set -euo pipefail
+          bash infra/run-swarm-migrations.sh \
+            swarm \
+            "$GITHUB_RUN_ID" \
+            accommodation \
+            "${DOCKERHUB_NAMESPACE}/accommodation-service:${ACCOMMODATIO_SERVICE_VERSION}"
 
       - name: Deploy stacks
         run: |
