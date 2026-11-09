@@ -305,7 +305,7 @@ jobs:
       LOCATION_SERVICE_VERSION: ${{ needs.build_push.outputs.location_version || 'dev' }}
       GATEWAY_SERVICE_VERSION: ${{ needs.build_push.outputs.gateway_version || 'dev' }}
       TRANSPORT_SERVICE_VERSION: ${{ needs.build_push.outputs.transport_version || 'dev' }}
-      ACCOMMODATIO_SERVICE_VERSION: ${{ needs.build_push.outputs.accommodation_version || 'dev' }}
+      ACCOMMODATION_SERVICE_VERSION: ${{ needs.build_push.outputs.accommodation_version || 'dev' }}
       FRONTEND_VERSION: ${{ needs.build_push.outputs.frontend_version || 'dev' }}
       POSTGRES_IMAGE_VERSION: ${{ needs.build_push.outputs.postgres_version || 'dev' }}
       GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
@@ -403,11 +403,38 @@ jobs:
             swarm \
             "$GITHUB_RUN_ID" \
             accommodation \
-            "${DOCKERHUB_NAMESPACE}/accommodation-service:${ACCOMMODATIO_SERVICE_VERSION}"
+            "${DOCKERHUB_NAMESPACE}/accommodation-service:${ACCOMMODATION_SERVICE_VERSION}"
 
       - name: Deploy stacks
         run: |
           set -euo pipefail
-          envsubst < infra/stacks/gateway-stack.yml | docker --context swarm stack deploy -c - gate
-          envsubst < infra/stacks/app-stack.yml | docker --context swarm stack deploy -c - apps
-          envsubst < infra/stacks/frontend-stack.yml | docker --context swarm stack deploy -c - front
+
+          echo "=== Gateway source ==="
+          wc -l infra/stacks/gateway-stack.yml
+
+          echo "=== Render gateway ==="
+          envsubst < infra/stacks/gateway-stack.yml > /tmp/gateway-rendered.yml
+
+          echo "=== Rendered lines ==="
+          wc -l /tmp/gateway-rendered.yml
+
+          echo "=== Lines 295-315 ==="
+          nl -ba /tmp/gateway-rendered.yml | sed -n '295,315p'
+
+          echo "=== Validate gateway ==="
+          docker --context swarm stack config \
+            -c /tmp/gateway-rendered.yml
+
+          echo "=== Deploy gateway ==="
+          docker --context swarm stack deploy \
+            -c /tmp/gateway-rendered.yml gate
+
+          echo "=== Deploy apps ==="
+          envsubst < infra/stacks/app-stack.yml > /tmp/app-rendered.yml
+          docker --context swarm stack config -c /tmp/app-rendered.yml >/dev/null
+          docker --context swarm stack deploy -c /tmp/app-rendered.yml apps
+
+          echo "=== Deploy frontend ==="
+          envsubst < infra/stacks/frontend-stack.yml > /tmp/frontend-rendered.yml
+          docker --context swarm stack config -c /tmp/frontend-rendered.yml >/dev/null
+          docker --context swarm stack deploy -c /tmp/frontend-rendered.yml front
