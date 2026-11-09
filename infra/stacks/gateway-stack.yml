@@ -53,10 +53,6 @@ networks:
     external: true
 
 secrets:
-  # Runtime
-  gateway_port:
-    external: true
-
   # Auth
   JWT_SECRET:
     external: true

@@ -249,7 +249,7 @@ services:
     secrets:
       # Gateway identity
       - GATEWAY_NAME
-      - TRANSORT_SERVICE_TOKEN
+      - TRANSPORT_SERVICE_TOKEN
       - GATEWAY_URL
 
       # Debug
@@ -261,11 +261,11 @@ services:
       - REDIS_PORT
 
       # Database
-      - DB_TRANSORT_SERVICE_HOST
-      - DB_TRANSORT_SERVICE_PORT
-      - DB_TRANSORT_SERVICE_NAME
-      - DB_TRANSORT_SERVICE_USER
-      - DB_TRANSORT_SERVICE_PASS
+      - DB_TRANSPORT_SERVICE_HOST
+      - DB_TRANSPORT_SERVICE_PORT
+      - DB_TRANSPORT_SERVICE_NAME
+      - DB_TRANSPORT_SERVICE_USER
+      - DB_TRANSPORT_SERVICE_PASS
 
       
     environment:
@@ -275,7 +275,7 @@ services:
 
       # Gateway identity
       GATEWAY_NAME_FILE: /run/secrets/GATEWAY_NAME
-      TRANSORT_SERVICE_TOKEN_FILE: /run/secrets/TRANSORT_SERVICE_TOKEN
+      TRANSPORT_SERVICE_TOKEN_FILE: /run/secrets/TRANSPORT_SERVICE_TOKEN
       GATEWAY_URL_FILE: /run/secrets/GATEWAY_URL
 
       # Debug
@@ -287,11 +287,11 @@ services:
       REDIS_PORT_FILE: /run/secrets/REDIS_PORT
 
       # Database
-      DB_TRANSORT_SERVICE_HOST_FILE: /run/secrets/DB_TRANSORT_SERVICE_HOST
-      DB_TRANSORT_SERVICE_PORT_FILE: /run/secrets/DB_TRANSORT_SERVICE_PORT
-      DB_TRANSORT_SERVICE_NAME_FILE: /run/secrets/DB_TRANSORT_SERVICE_NAME
-      DB_TRANSORT_SERVICE_USER_FILE: /run/secrets/DB_TRANSORT_SERVICE_USER
-      DB_TRANSORT_SERVICE_PASS_FILE: /run/secrets/DB_TRANSORT_SERVICE_PASS
+      DB_TRANSPORT_SERVICE_HOST_FILE: /run/secrets/DB_TRANSPORT_SERVICE_HOST
+      DB_TRANSPORT_SERVICE_PORT_FILE: /run/secrets/DB_TRANSPORT_SERVICE_PORT
+      DB_TRANSPORT_SERVICE_NAME_FILE: /run/secrets/DB_TRANSPORT_SERVICE_NAME
+      DB_TRANSPORT_SERVICE_USER_FILE: /run/secrets/DB_TRANSPORT_SERVICE_USER
+      DB_TRANSPORT_SERVICE_PASS_FILE: /run/secrets/DB_TRANSPORT_SERVICE_PASS
 
       
       # Settings
@@ -310,7 +310,7 @@ services:
     secrets:
       # Gateway identity
       - GATEWAY_NAME
-      - TRANSORT_SERVICE_TOKEN
+      - ACCOMMODATION_SERVICE_TOKEN
       - GATEWAY_URL
 
       # Debug
@@ -385,6 +385,10 @@ secrets:
   PROFILE_SERVICE_TOKEN:
     external: true
   AUTH_SERVICE_TOKEN:
+    external: true
+  TRANSPORT_SERVICE_TOKEN:
+  external: true
+  ACCOMMODATION_SERVICE_TOKEN:
     external: true
 
   # Debug
