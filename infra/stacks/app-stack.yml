@@ -387,7 +387,7 @@ secrets:
   AUTH_SERVICE_TOKEN:
     external: true
   TRANSPORT_SERVICE_TOKEN:
-  external: true
+    external: true
   ACCOMMODATION_SERVICE_TOKEN:
     external: true
 
